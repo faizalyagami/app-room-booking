@@ -18,11 +18,12 @@
             <i class="fas fa-door-open"></i> <span>List Ruangan</span>
           </a>
         </li>
-        {{-- <li class="{{ request()->is('room*') ? 'active' : '' }}">
-          <a class="nav-link" href="{{ route('room-list.index') }}">
+        <li class="menu-header">ALAT TEST</li>
+        <li class="{{ request()->is('alat-test*') ? 'active' : '' }}">
+          <a class="nav-link" href="{{ route('alat-test.index') }}">
             <i class="fa solid fa-swatchbook"></i> <span>List Alat Test</span>
           </a>
-        </li> --}}
+        </li>
 
         <li class="menu-header">TRANSAKSI</li>
         <li class="{{ request()->is('my-booking-list*') ? 'active' : '' }}">
@@ -49,6 +50,11 @@
         <li class="{{ request()->is('admin/room*') ? 'active' : '' }}">
           <a class="nav-link" href="{{ route('room.index') }}">
             <i class="fas fa-door-open"></i> <span>Ruangan</span>
+          </a>
+        </li>
+        <li class="{{ route()->is('admin/alat-test*') ? 'active' : '' }}">
+          <a class="nav-link" href="{{ route('alat-test-admin.index') }}">
+            <i class="fas fa-toolbox"><span>Alat Test Psikologi</span></i>
           </a>
         </li>
         <li class="{{ request()->is('admin/user*') ? 'active' : '' }}">

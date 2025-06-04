@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AlatTestController as AdminAlatTestController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Admin\RoomController;
 use App\Http\Controllers\Admin\BookingListController;
 
 use App\Http\Controllers\ChangePassController;
+use App\Http\Controllers\User\AlatTestController;
 use Illuminate\Support\Facades\Auth;
 
 // use Illuminate\Support\Facades\Mail;
@@ -66,6 +68,8 @@ Route::prefix('/')
         Route::put('/my-booking-list/{id}/cancel', [MyBookingListController::class, 'cancel'])
             ->name('my-booking-list.cancel');
 
+        Route::get('/alat-test', [AlatTestController::class, 'index'])
+            ->name('alat-test.index');
         // Route::get('/mail', function () {
         //     Mail::to('fajarwindhuzulfikar@gmail.com')
         //         ->send(new \App\Mail\BookingMail('Booking Ruangan 3', 'Admin'));
@@ -99,6 +103,9 @@ Route::prefix('admin')
 
         Route::put('/booking-list/{id}/update/{value}', [BookingListController::class, 'update'])
             ->name('booking-list.update');
+
+        Route::get('/alat-test/json', [AdminAlatTestController::class, 'json'])->name('alat-test.json');
+        Route::resource('alat-test', AdminAlatTestController::class)->names('alat-test-admin');
 
         Route::resources([
             'user'          => UserController::class,
