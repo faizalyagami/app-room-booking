@@ -8,7 +8,7 @@
       <div class="row">
         <div class="col-12 col-sm-8 offset-sm-2 col-md-6 offset-md-3 col-lg-6 offset-lg-3 col-xl-4 offset-xl-4">
           <div class="login-brand">
-            ROOMING
+            SISTEM INFORMASI MANAJEMEN BOOKING RUANGAN & PEMINJAMAN ALAT TEST LABORATORIUM PSIKOLOGI
           </div>
 
           <div class="card card-primary">
@@ -50,8 +50,8 @@
           </div>
           
           <div class="simple-footer">
-            Copyright &copy; ROOMING 2021 - Present. <br>
-            Powered by &copy; Stisla 2018
+            Copyright &copy; Laboratorium Psikologi UNISBA. <br>
+            Powered by &copy; Fakultas Psikologi UNISBA 2025
           </div>
         </div>
       </div>
