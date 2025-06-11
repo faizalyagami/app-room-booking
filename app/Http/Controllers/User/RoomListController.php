@@ -11,12 +11,13 @@ use DataTables;
 
 class RoomListController extends Controller
 {
-    public function json(){
+    public function json()
+    {
         $data = Room::all();
 
         return DataTables::of($data)
-        ->addIndexColumn()
-        ->make(true);
+            ->addIndexColumn()
+            ->make(true);
     }
 
     /**

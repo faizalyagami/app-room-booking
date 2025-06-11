@@ -13,7 +13,8 @@ use App\Http\Controllers\Admin\RoomController;
 use App\Http\Controllers\Admin\BookingListController;
 
 use App\Http\Controllers\ChangePassController;
-use App\Http\Controllers\User\AlatTestController;
+use App\Http\Controllers\User\AlatTestListController;
+use App\Http\Controllers\Admin\AlatTestController;
 use Illuminate\Support\Facades\Auth;
 
 // use Illuminate\Support\Facades\Mail;
@@ -68,7 +69,7 @@ Route::prefix('/')
         Route::put('/my-booking-list/{id}/cancel', [MyBookingListController::class, 'cancel'])
             ->name('my-booking-list.cancel');
 
-        Route::get('/alat-test', [AlatTestController::class, 'index'])
+        Route::get('/alat-test', [AdminAlatTestController::class, 'index'])
             ->name('alat-test.index');
         // Route::get('/mail', function () {
         //     Mail::to('fajarwindhuzulfikar@gmail.com')

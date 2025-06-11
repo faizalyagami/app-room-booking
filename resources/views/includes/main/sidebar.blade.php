@@ -52,9 +52,9 @@
             <i class="fas fa-door-open"></i> <span>Ruangan</span>
           </a>
         </li>
-        <li class="{{ route()->is('admin/alat-test*') ? 'active' : '' }}">
+        <li class="{{ request()->is('admin/alat-test*') ? 'active' : '' }}">
           <a class="nav-link" href="{{ route('alat-test-admin.index') }}">
-            <i class="fas fa-toolbox"><span>Alat Test Psikologi</span></i>
+            <i class="fas fa-toolbox"></i><span>Alat Test Psikologi</span>
           </a>
         </li>
         <li class="{{ request()->is('admin/user*') ? 'active' : '' }}">

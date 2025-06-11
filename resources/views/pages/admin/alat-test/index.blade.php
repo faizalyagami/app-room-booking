@@ -1,0 +1,109 @@
+@extends('layouts.main')
+
+@section('title', 'Data Alat Test - ROOMING')
+
+@section('header-title', 'Data Alat Test')
+
+@section('breadcrumbs')
+  <div class="breadcrumb-item"><a href="#">Alat Test</a></div>
+  <div class="breadcrumb-item active">Data Alat Test</div>
+@endsection
+
+@section('section-title', 'Alat Test')
+
+@section('section-lead')
+  Berikut ini adalah daftar seluruh alat test yang tersedia di laboratorium.
+@endsection
+
+@section('content')
+
+  @component('components.datatables')
+    @slot('buttons')
+      <a href="{{ route('alat-test-admin.create') }}" class="btn btn-primary"><i class="fas fa-plus"></i>&nbsp;Tambah Alat Test</a>
+    @endslot
+    
+    @slot('table_id', 'alat-table')
+
+    @slot('table_header')
+      <tr>
+        <th>#</th>
+        <th>Foto</th>
+        <th>Nama</th>
+        <th>Deskripsi</th>
+        <th>Stok</th>
+      </tr>
+    @endslot
+  @endcomponent
+
+@endsection
+
+@push('after-script')
+<script>
+  $(document).ready(function() {
+    $('#alat-table').DataTable({
+      processing: true,
+      serverSide: true,
+      ajax: '{{ route('alat-test.json') }}',
+      order: [2, 'asc'],
+      columns: [
+        { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+        { 
+          data: 'photo', 
+          name: 'photo', 
+          orderable: false, 
+          searchable: false,
+          render: function(data) {
+            if (data) {
+              return '<div class="gallery gallery-fw">' +
+                '<a href="{{ asset('storage') }}/' + data + '" data-toggle="lightbox">' +
+                '<img src="{{ asset('storage') }}/' + data + '" class="img-fluid" style="min-width: 80px; height: auto;">' +
+                '</a>' +
+              '</div>';
+            } else {
+              return '-';
+            }
+          }
+        },
+        { 
+          data: 'name', 
+          name: 'name',
+          render: function(data, type, row) {
+            var html = row.name;
+            html += '<div class="table-links">' +
+              '<a href="alat/' + row.id + '/edit" class="text-primary">Edit</a>' +
+              '<div class="bullet"></div>' +
+              '<a href="javascript:;" data-id="' + row.id + '" data-title="Hapus" data-body="Yakin ingin menghapus ini?" class="text-danger" id="delete-btn">Hapus</a>' +
+              '</div>';
+            return html;
+          }
+        },
+        { data: 'description', name: 'description' },
+        { data: 'stock', name: 'stock' }
+      ]
+    });
+
+    $(document).on('click', '#delete-btn', function() {
+      var id = $(this).data('id');
+      var title = $(this).data('title');
+      var body = $(this).data('body');
+
+      $('.modal-title').html(title);
+      $('.modal-body').html(body);
+      $('#confirm-form').attr('action', 'alat/' + id);
+      $('#confirm-form').attr('method', 'POST');
+      $('#submit-btn').attr('class', 'btn btn-danger');
+      $('#lara-method').attr('value', 'delete');
+      $('#confirm-modal').modal('show');
+    });
+
+    $(document).on('click', '[data-toggle="lightbox"]', function(event) {
+      event.preventDefault();
+      $(this).ekkoLightbox();
+    });
+  });
+</script>
+
+@include('includes.lightbox')
+@include('includes.notification')
+@include('includes.confirm-modal')
+@endpush

@@ -67,6 +67,46 @@
     </div>
   </div>
 
+  <div class="col-lg-6 col-md-6 col-sm-12">
+  <div class="card card-statistic-2">
+    <div class="card-stats">
+      <div class="card-stats-title">Statistik Peminjaman Alat Test</div>
+      <div class="card-stats-items">
+        <div class="card-stats-item">
+          <div class="card-stats-item-count text-warning">{{ $alat_test_pending }}</div>
+          <div class="card-stats-item-label">Pending</div>
+        </div>
+        <div class="card-stats-item">
+          <div class="card-stats-item-count text-info">{{ $alat_test_disetujui }}</div>
+          <div class="card-stats-item-label">Disetujui</div>
+        </div>
+        <div class="card-stats-item">
+          <div class="card-stats-item-count text-success">{{ $alat_test_dikembalikan }}</div>
+          <div class="card-stats-item-label">Dikembalikan</div>
+        </div>
+      </div>
+      <div class="card-stats-items justify-content-center">
+        <div class="card-stats-item">
+          <div class="card-stats-item-count text-danger">{{ $alat_test_ditolak }}</div>
+          <div class="card-stats-item-label">Ditolak</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-icon shadow-primary bg-info">
+      <i class="fas fa-toolbox"></i>
+    </div>
+    <div class="card-wrap">
+      <div class="card-header">
+        <h4>Total Peminjaman Alat</h4>
+      </div>
+      <div class="card-body">
+        {{ $alat_test_all }}
+      </div>
+    </div>
+  </div>
+</div>
+
+
   <div class="col-lg-3 col-md-6 col-sm-6 col-12">    
     @component('components.statistic-card')
       @slot('bg_color', 'bg-primary')
