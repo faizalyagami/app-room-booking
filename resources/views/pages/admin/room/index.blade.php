@@ -62,13 +62,16 @@
         searchable: false,
         render: function ( data, type, row ) {
           if(data != null) {
-            return `<div class="gallery gallery-fw">`
-              + `<a href="{{ asset('storage/${data}') }}" data-toggle="lightbox">`
-                + `<img src="{{ asset('storage/${data}') }}" class="img-fluid" style="min-width: 80px; height: auto;">`
-              + `</a>`
-            + '</div>';
+            let url = `/storage/${data}`;
+            return `
+              <div class="gallery gallery-fw">
+                <a href="${url}" data-toggle="lightbox">
+                  <img src="${url}" class="img-fluid" style="min-width: 80px; height: auto;">
+                </a>
+              </div>
+            `;
           } else {
-            return '-'
+            return '-';
           }
         }
       },

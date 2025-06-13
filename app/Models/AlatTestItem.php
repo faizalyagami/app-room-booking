@@ -11,6 +11,10 @@ class AlatTestItem extends Model
 
     protected $fillable = ['alat_test_id', 'serial_number', 'status'];
 
+    protected $casts = ['serial_number' => 'string', 'status' => 'string'];
+
+    protected $attributes = ['status' => 'tersedia'];
+
     public function alatTest()
     {
         return $this->belongsTo(AlatTest::class);

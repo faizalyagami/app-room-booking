@@ -124,7 +124,22 @@
       @slot('value', $user)
     @endcomponent
   </div>
-  
-  
-</div>
+
+  <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+    @component('components.statistic-card')
+      @slot('bg_color', 'bg-info')
+      @slot('icon', 'fas fa-toolbox')
+      @slot('title', 'Total Alat Test')
+      @slot('value', $alat_test)
+    @endcomponent
+  </div>
+
+  <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+    @component('components.statistic-card')
+      @slot('bg_color', 'bg-info')
+      @slot('icon', 'fas fa-user')
+      @slot('title', 'Total Alat Test')
+      @slot('value', $user)
+    @endcomponent
+  </div>
 @endsection

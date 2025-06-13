@@ -28,7 +28,7 @@
       <tr>
         <th>#</th>
         <th>Foto</th>
-        <th>Nama</th>
+        <th>Nama Alat Test</th>
         <th>Deskripsi</th>
         <th>Stok</th>
       </tr>
@@ -38,6 +38,12 @@
 @endsection
 
 @push('after-script')
+<style>
+  .text-wrap {
+    white-space: normal !important;
+    word-wrap: break-word;
+  }
+</style>
 <script>
   $(document).ready(function() {
     $('#alat-table').DataTable({
@@ -77,7 +83,7 @@
             return html;
           }
         },
-        { data: 'description', name: 'description' },
+        { data: 'description', name: 'description', className: 'text-wrap'},
         { data: 'stock', name: 'stock' }
       ]
     });
