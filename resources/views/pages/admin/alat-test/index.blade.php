@@ -31,6 +31,7 @@
         <th>Nama Alat Test</th>
         <th>Deskripsi</th>
         <th>Stok</th>
+        <th>Aksi</th>
       </tr>
     @endslot
   @endcomponent
@@ -70,21 +71,25 @@
             }
           }
         },
-        { 
-          data: 'name', 
-          name: 'name',
-          render: function(data, type, row) {
-            var html = row.name;
-            html += '<div class="table-links">' +
-              '<a href="alat/' + row.id + '/edit" class="text-primary">Edit</a>' +
-              '<div class="bullet"></div>' +
-              '<a href="javascript:;" data-id="' + row.id + '" data-title="Hapus" data-body="Yakin ingin menghapus ini?" class="text-danger" id="delete-btn">Hapus</a>' +
-              '</div>';
-            return html;
-          }
-        },
+        { data: 'name', name: 'name' },
         { data: 'description', name: 'description', className: 'text-wrap'},
-        { data: 'stock', name: 'stock' }
+        { data: 'stock', name: 'stock' },
+        {
+          data: 'id',
+          name: 'aksi',
+          orderable: false,
+          searchable: false,
+          render: function(id, type, row) {
+            return `
+              <div class="table-links">
+                <a href="alat-test/${id}" class="text-info">Detail</a>
+                <div class="bullet"></div>
+                <a href="alat-test/${id}/edit" class="text-primary">Edit</a>
+                <div class="bullet"></div>
+                <a href="javascript:;" data-id="${id}" data-title="Hapus" data-body="Yakin ingin menghapus ini?" class="text-danger" id="delete-btn">Hapus</a>
+              </div>`;
+          }
+        }
       ]
     });
 
