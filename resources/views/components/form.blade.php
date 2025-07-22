@@ -15,6 +15,9 @@
 
         @csrf
         @isset($method) @method($method) @endisset
+        @isset($method_put) 
+          @method($method_put)
+        @endisset
 
         @if (isset($card_header) && $card_header == 'true')
         <div class="card-header @isset($card_header_class) {{ $card_header_class }} @endisset">

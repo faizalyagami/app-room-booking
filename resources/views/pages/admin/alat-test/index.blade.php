@@ -100,7 +100,7 @@
 
       $('.modal-title').html(title);
       $('.modal-body').html(body);
-      $('#confirm-form').attr('action', 'alat/' + id);
+      $('#confirm-form').attr('action', '{{ route('alat-test-admin.destroy', ':id') }}'.replace(':id', id));
       $('#confirm-form').attr('method', 'POST');
       $('#submit-btn').attr('class', 'btn btn-danger');
       $('#lara-method').attr('value', 'delete');

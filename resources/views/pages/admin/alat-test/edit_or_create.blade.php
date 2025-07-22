@@ -64,9 +64,9 @@
         @isset($item->name)
           @slot('input_value') {{ $item->name }} @endslot
         @endisset
-        @isset($item)
+        {{-- @isset($item)
           @slot('other_attributes', 'disabled')
-        @endisset
+        @endisset --}}
         @empty($item)
           @slot('form_group_class', 'required')
           @slot('other_attributes', 'required autofocus')

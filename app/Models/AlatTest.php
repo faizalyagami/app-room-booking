@@ -24,13 +24,20 @@ class AlatTest extends Model
         return $this->hasMany(AlatTestItem::class);
     }
 
+    //Total stok (jumlah semua unit)
     public function getStockAttribute()
     {
         return $this->items()->count();
     }
 
+    //Stok tersedia
     public function getAvaliableStockAttribute()
     {
         return $this->items()->where('status', 'tersedia')->count();
+    }
+
+    public function getBorrowedStockAttribute()
+    {
+        return $this->items()->where('status', 'dipinjam')->count();
     }
 }

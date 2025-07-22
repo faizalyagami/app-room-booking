@@ -18,7 +18,6 @@ class CreateAlatTestTable extends Migration
             $table->string('name', 100)->unique();
             $table->string('description')->nullable();
             $table->string('photo')->nullable();
-            $table->string('serial_number')->unique();
             $table->softDeletes();
             $table->timestamps();
         });

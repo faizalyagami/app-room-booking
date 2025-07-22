@@ -17,7 +17,7 @@ class CreateAlatTestUnitsTable extends Migration
             $table->id();
             $table->foreignId('alat_test_id')->constrained()->onDelete('cascade');
             $table->string('serial_number')->unique();
-            $table->enum('status', ['tersedia', 'dipinjam'])->default();
+            $table->enum('status', ['tersedia', 'dipinjam'])->default('tersedia');
             $table->timestamps();
         });
     }

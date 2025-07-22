@@ -24,6 +24,7 @@ class UserAddRequest extends FormRequest
     public function rules()
     {
         return [
+            'npm'               => 'required|string|max:11|unique:users,npm,' . $this->id,
             'email'             => 'required|string|min:3|max:100|unique:users,email',
             'username'          => 'required|string|min:3|max:20|unique:users,username',
             'password'          => 'required|string|min:3|max:20',

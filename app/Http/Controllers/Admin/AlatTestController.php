@@ -9,6 +9,8 @@ use App\Models\AlatTestItem;
 use Hamcrest\Type\IsNumeric;
 use Illuminate\Http\Request;
 use Yajra\DataTables\DataTables;
+use Illuminate\Support\Facades\Storage;
+
 
 class AlatTestController extends Controller
 {
@@ -40,40 +42,41 @@ class AlatTestController extends Controller
     public function store(AlatTestRequest $request)
     {
         $data = $request->only(['name', 'description']);
-        // dd($request->all());
+
+        // Cek jika ada file foto
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('assets/image/alat-test', 'public');
         }
 
-        $alatTest = AlatTest::create($data);
+        // Cegah duplikasi alat test berdasarkan name
+        $alatTest = AlatTest::firstOrCreate(
+            ['name' => $data['name']],
+            $data
+        );
 
-        //membuat serial number otomatis
-        if (is_numeric($request->stock) && $request->stock > 0) {
-            $tahun = now()->year;
-            $nama = strtoupper(str_replace(' ', '-', $alatTest->name));
+        // Cek apakah alat test baru dibuat atau sudah ada
+        if ($alatTest->wasRecentlyCreated) {
+            // Jika baru dibuat, buat serial number sesuai stok
+            if (is_numeric($request->stock) && $request->stock > 0) {
+                $tahun = now()->year;
+                $nama = strtoupper(str_replace(' ', '-', $alatTest->name));
 
-            //hitung jumlah alat test dengan nama yang sama
-            $jumlahSama = AlatTestItem::whereHas('alatTest', function ($q) use ($alatTest) {
-                $q->where('name', $alatTest->name);
-            })->count();
+                for ($i = 1; $i <= $request->stock; $i++) {
+                    $nomorUrut = str_pad($i, 3, '0', STR_PAD_LEFT);
+                    $serialNumber = "LabPsi/{$nama}/{$nomorUrut}/{$tahun}";
 
-            for ($i = 1; $i < $request->stock; $i++) {
-                //buat nomer urut 3 digit
-                $nomorUrut = str_pad($jumlahSama + 1, 3, '0', STR_PAD_LEFT);
-
-                $serialNumber = "LabPsi/{$nama}/{$nomorUrut}/{$tahun}";
-
-                AlatTestItem::create([
-                    'alat_test_id' => $alatTest->id,
-                    'serial_number' => $serialNumber,
-                    // 'serial_number' => $request->serial_number,
-                    'status' => 'tersedia'
-                ]);
+                    AlatTestItem::create([
+                        'alat_test_id' => $alatTest->id,
+                        'serial_number' => $serialNumber,
+                        'status' => 'tersedia'
+                    ]);
+                }
             }
         }
 
         return redirect()->route('alat-test-admin.index')->with('success', 'Alat test berhasil ditambahkan');
     }
+
 
     public function edit($id)
     {
@@ -84,7 +87,7 @@ class AlatTestController extends Controller
 
     public function update(AlatTestRequest $request, $id)
     {
-        $alatTest = AlatTest::findOrFail($id);
+        $alatTest = AlatTest::with('items')->findOrFail($id);
         $data = $request->only(['name', 'description']);
 
         if ($request->hasFile('photo')) {
@@ -93,6 +96,51 @@ class AlatTestController extends Controller
 
         $alatTest->update($data);
 
+        // Hitung jumlah stok saat ini
+        $stokSaatIni = $alatTest->items()->count();
+
+        // Jika jumlah stock baru > stok saat ini, tambahkan item baru
+        if (is_numeric($request->stock) && $request->stock > $stokSaatIni) {
+            $tahun = now()->year;
+            $nama = strtoupper(str_replace(' ', '-', $alatTest->name));
+            $jumlahTambahan = $request->stock - $stokSaatIni;
+
+            for ($i = 1; $i <= $jumlahTambahan; $i++) {
+                $nomorUrut = str_pad($stokSaatIni + $i, 3, '0', STR_PAD_LEFT);
+                $serialNumber = "LabPsi/{$nama}/{$nomorUrut}/{$tahun}";
+
+                AlatTestItem::create([
+                    'alat_test_id' => $alatTest->id,
+                    'serial_number' => $serialNumber,
+                    'status' => 'tersedia'
+                ]);
+            }
+        }
+
         return redirect()->route('alat-test-admin.index')->with('success', 'Alat test berhasil diperbaharui');
+    }
+
+    public function show($id)
+    {
+        $item = AlatTest::with('items')->findOrFail($id);
+        return view('pages.admin.alat-test.show', compact('item'));
+    }
+
+    public function destroy($id)
+    {
+        $alatTest = AlatTest::findOrFail($id);
+
+        // Hapus semua item terkait jika diperlukan
+        $alatTest->items()->delete(); // jika relasi items()
+
+        // Hapus file foto dari storage (opsional)
+        if ($alatTest->photo && Storage::disk('public')->exists($alatTest->photo)) {
+            Storage::disk('public')->delete($alatTest->photo);
+        }
+
+        // Hapus alat test
+        $alatTest->delete();
+
+        return redirect()->route('alat-test-admin.index')->with('success', 'Data alat test berhasil dihapus.');
     }
 }
