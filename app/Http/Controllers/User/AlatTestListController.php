@@ -14,7 +14,7 @@ class AlatTestListController extends Controller
      */
     public function index()
     {
-        //
+        return view('pages.user.alat-test.index');
     }
 
     /**

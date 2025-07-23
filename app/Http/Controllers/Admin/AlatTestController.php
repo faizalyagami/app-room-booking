@@ -8,7 +8,6 @@ use App\Models\AlatTest;
 use App\Models\AlatTestItem;
 use Hamcrest\Type\IsNumeric;
 use Illuminate\Http\Request;
-use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\Storage;
 
 
@@ -16,18 +15,28 @@ class AlatTestController extends Controller
 {
     public function json()
     {
-        // $data = AlatTest::all();
-        // dd($data);
         $data = AlatTest::withCount([
             'items as stock' => function ($query) {
                 $query->where('status', 'tersedia');
             }
         ])->get();
 
-        return DataTables::of($data)
-            ->addIndexColumn()
-            ->make(true);
+        $result = [];
+
+        foreach ($data as $index => $item) {
+            $result[] = [
+                'DT_RowIndex' => $index + 1,
+                'photo'       => $item->photo,
+                'name'        => $item->name,
+                'description' => $item->description,
+                'stock'       => $item->stock,
+                'id'          => $item->id,
+            ];
+        }
+
+        return response()->json(['data' => $result]);
     }
+
 
     public function index()
     {

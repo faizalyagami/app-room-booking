@@ -21,13 +21,13 @@ class BookingAlat extends Model
         'status'
     ];
 
-    public function bookingAlat()
+    public function alatTest()
     {
-        return $this->hasOne(AlatTest::class, 'id', 'alat_test_id');
+        return $this->belongsTo(AlatTest::class, 'alat_test_id');
     }
 
     public function user()
     {
-        return $this->hasOne(User::class, 'id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

@@ -28,7 +28,13 @@
         <li class="menu-header">TRANSAKSI</li>
         <li class="{{ request()->is('my-booking-list*') ? 'active' : '' }}">
           <a class="nav-link" href="{{ route('my-booking-list.index') }}">
-            <i class="fas fa-list"></i> <span>My Booking List</span>
+            <i class="fas fa-list"></i> <span>My Booking Room List</span>
+          </a>
+        </li>
+
+        <li class="{{ request()->is('my-booking-alat-test-list*') ? 'active' : '' }}">
+          <a class="nav-link" href="{{ route('my-booking-alat-test-list.index') }}">
+            <i class="fas fa-vials"></i> <span>My Booking Alat Test List</span>
           </a>
         </li>
 
@@ -53,7 +59,7 @@
           </a>
         </li>
         <li class="{{ request()->is('admin/alat-test*') ? 'active' : '' }}">
-          <a class="nav-link" href="{{ route('alat-test-admin.index') }}">
+          <a class="nav-link" href="{{ route('alat-test-list.index') }}">
             <i class="fas fa-toolbox"></i><span>Alat Test Psikologi</span>
           </a>
         </li>

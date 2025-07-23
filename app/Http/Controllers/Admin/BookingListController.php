@@ -18,15 +18,29 @@ use Carbon\Carbon;
 
 class BookingListController extends Controller
 {
-    public function json(){
-        $data = BookingList::with([
-            'room', 'user'
-        ]);
+    public function json()
+    {
+        $data = BookingList::with(['room', 'user'])->get();
 
-        return DataTables::of($data)
-        ->addIndexColumn()
-        ->make(true);
+        $result = $data->map(function ($item, $index) {
+            return [
+                'index'         => $index + 1,
+                'id'            => $item->id,
+                'room'          => $item->room->name ?? '-',
+                'user'          => $item->user->name ?? '-',
+                'date'          => $item->date,
+                'start_time'    => $item->start_time,
+                'end_time'      => $item->end_time,
+                'purpose'       => $item->purpose,
+                'status'        => $item->status,
+            ];
+        });
+
+        return response()->json([
+            'data' => $result
+        ]);
     }
+
 
     /**
      * Display a listing of the resource.
@@ -50,27 +64,25 @@ class BookingListController extends Controller
         $admin_name         = Auth::user()->name;
         $admin_email        = Auth::user()->email;
 
-        if($value == 1) {
+        if ($value == 1) {
             $data['status'] = 'DISETUJUI';
-        }
-        else if($value == 0) {
+        } else if ($value == 0) {
             $data['status'] = 'DITOLAK';
-        }
-        else {
+        } else {
             session()->flash('alert-failed', 'Perintah tidak dimengerti');
             return redirect()->route('booking-list.index');
         }
 
-        if($item['date'] > $today || ($item['date'] == $today && $item['start_time'] > $now)) {
-            if($data['status'] == 'DISETUJUI') {
-                if(
+        if ($item['date'] > $today || ($item['date'] == $today && $item['start_time'] > $now)) {
+            if ($data['status'] == 'DISETUJUI') {
+                if (
                     BookingList::where([
                         ['date', '=', $item['date']],
                         ['room_id', '=', $item['room_id']],
                         ['status', '=', 'DISETUJUI'],
                     ])
                     ->whereBetween('start_time', [$item['start_time'], $item['end_time']])
-                    ->count() <= 0 && 
+                    ->count() <= 0 &&
                     BookingList::where([
                         ['date', '=', $item['date']],
                         ['room_id', '=', $item['room_id']],
@@ -86,8 +98,8 @@ class BookingListController extends Controller
                         ['status', '=', 'DISETUJUI'],
                     ])->count() <= 0
                 ) {
-                    if($item->update($data)) {
-                        session()->flash('alert-success', 'Booking Ruang '.$item->room->name.' sekarang '.$data['status']);
+                    if ($item->update($data)) {
+                        session()->flash('alert-success', 'Booking Ruang ' . $item->room->name . ' sekarang ' . $data['status']);
 
                         $to_role    = 'USER';
 
@@ -100,16 +112,15 @@ class BookingListController extends Controller
 
                         // URL::to('/admin/booking-list)
                         dispatch(new SendEmail($admin_email, $user_name, $item->room->name, $item['date'], $item['start_time'], $item['end_time'], $item['purpose'], $to_role, $admin_name, 'https://google.com', $data['status']));
-
                     } else {
-                        session()->flash('alert-failed', 'Booking Ruang '.$item->room->name.' gagal diupdate');
+                        session()->flash('alert-failed', 'Booking Ruang ' . $item->room->name . ' gagal diupdate');
                     }
                 } else {
-                    session()->flash('alert-failed', 'Ruangan '.$item->room->name.' di waktu itu sudah dibooking');
-                }   
-            } elseif($data['status'] == 'DITOLAK') {
-                if($item->update($data)) {
-                    session()->flash('alert-success', 'Booking Ruang '.$item->room->name.' sekarang '.$data['status']);
+                    session()->flash('alert-failed', 'Ruangan ' . $item->room->name . ' di waktu itu sudah dibooking');
+                }
+            } elseif ($data['status'] == 'DITOLAK') {
+                if ($item->update($data)) {
+                    session()->flash('alert-success', 'Booking Ruang ' . $item->room->name . ' sekarang ' . $data['status']);
 
                     $to_role    = 'USER';
 
@@ -120,15 +131,14 @@ class BookingListController extends Controller
 
                     // URL::to('/admin/booking-list)
                     dispatch(new SendEmail($admin_email, $user_name, $item->room->name, $item['date'], $item['start_time'], $item['end_time'], $item['purpose'], $to_role, $admin_name, 'https://google.com', $data['status']));
-
                 } else {
-                    session()->flash('alert-failed', 'Booking Ruang '.$item->room->name.' gagal diupdate');
+                    session()->flash('alert-failed', 'Booking Ruang ' . $item->room->name . ' gagal diupdate');
                 }
             }
         } else {
             session()->flash('alert-failed', 'Permintaan booking itu tidak lagi bisa diupdate');
         }
-        
+
         return redirect()->route('booking-list.index');
     }
 }

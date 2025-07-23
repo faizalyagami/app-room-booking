@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\BookingListController;
 use App\Http\Controllers\ChangePassController;
 use App\Http\Controllers\User\AlatTestListController;
 use App\Http\Controllers\Admin\AlatTestController;
+use App\Http\Controllers\User\AlatTestBookingController;
 use Illuminate\Support\Facades\Auth;
 
 // use Illuminate\Support\Facades\Mail;
@@ -69,13 +70,33 @@ Route::prefix('/')
         Route::put('/my-booking-list/{id}/cancel', [MyBookingListController::class, 'cancel'])
             ->name('my-booking-list.cancel');
 
-        Route::get('/alat-test', [AdminAlatTestController::class, 'index'])
+        Route::get('/alat-test', [AlatTestListController::class, 'index'])
             ->name('alat-test.index');
         // Route::get('/mail', function () {
         //     Mail::to('fajarwindhuzulfikar@gmail.com')
         //         ->send(new \App\Mail\BookingMail('Booking Ruangan 3', 'Admin'));
         //     return 'Terkirim';
         // });
+        // My Booking Alat Test List (USER)
+        Route::get('/my-booking-alat-test-list', [AlatTestBookingController::class, 'index'])
+            ->name('my-booking-alat-test-list.index');
+
+        Route::get('/my-booking-alat-test-list/json', [AlatTestBookingController::class, 'json'])->name('alat-test-booking.json');
+
+        Route::get('/my-booking-alat-test-list/create', [AlatTestBookingController::class, 'create'])
+            ->name('my-booking-alat-test-list.create');
+
+        Route::post('/my-booking-alat-test-list/store', [AlatTestBookingController::class, 'store'])
+            ->name('my-booking-alat-test-list.store');
+
+        Route::get('/my-booking-alat-test-list/{id}/edit', [AlatTestBookingController::class, 'edit'])
+            ->name('my-booking-alat-test-list.edit');
+
+        Route::put('/my-booking-alat-test-list/{id}/update', [AlatTestBookingController::class, 'update'])
+            ->name('my-booking-alat-test-list.update');
+
+        Route::delete('/my-booking-alat-test-list/{id}/delete', [AlatTestBookingController::class, 'destroy'])
+            ->name('my-booking-alat-test-list.destroy');
     });
 
 Route::prefix('admin')
@@ -113,6 +134,12 @@ Route::prefix('admin')
             'room'          => RoomController::class,
         ]);
     });
+
+// Route::prefix('alat-test-booking')->middleware('auth')->group(function () {
+//     Route::get('/', [AlatTestBookingController::class, 'index'])->name('alat-test-booking.index');
+//     Route::get('/create', [AlatTestBookingController::class, 'create'])->name('alat-test-booking.create');
+//     Route::post('/', [AlatTestBookingController::class, 'store'])->name('alat-test-booking.store');
+// });
 
 /* 
 | So basically we have 2 users here, USER and ADMIN. USER prefix is '/'

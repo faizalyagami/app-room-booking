@@ -47,39 +47,36 @@
 </style>
 <script>
   $(document).ready(function() {
-    $('#alat-table').DataTable({
+    $('#booking_alats').DataTable({
       processing: true,
-      serverSide: true,
       ajax: '{{ route('alat-test.json') }}',
-      order: [2, 'asc'],
       columns: [
-        { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-        { 
-          data: 'photo', 
-          name: 'photo', 
-          orderable: false, 
-          searchable: false,
+        { data: 'DT_RowIndex', name: 'DT_RowIndex' },
+        {
+          data: 'photo',
+          name: 'photo',
           render: function(data) {
             if (data) {
-              return '<div class="gallery gallery-fw">' +
-                '<a href="{{ asset('storage') }}/' + data + '" data-toggle="lightbox">' +
-                '<img src="{{ asset('storage') }}/' + data + '" class="img-fluid" style="min-width: 80px; height: auto;">' +
-                '</a>' +
-              '</div>';
+              return `
+                <div class="gallery gallery-fw">
+                  <a href="/storage/${data}" data-toggle="lightbox">
+                    <img src="/storage/${data}" class="img-fluid" style="min-width: 80px; height: auto;">
+                  </a>
+                </div>`;
             } else {
               return '-';
             }
           }
         },
         { data: 'name', name: 'name' },
-        { data: 'description', name: 'description', className: 'text-wrap'},
+        { data: 'description', name: 'description', className: 'text-wrap' },
         { data: 'stock', name: 'stock' },
         {
           data: 'id',
           name: 'aksi',
           orderable: false,
           searchable: false,
-          render: function(id, type, row) {
+          render: function(id) {
             return `
               <div class="table-links">
                 <a href="alat-test/${id}" class="text-info">Detail</a>
@@ -92,6 +89,7 @@
         }
       ]
     });
+
 
     $(document).on('click', '#delete-btn', function() {
       var id = $(this).data('id');

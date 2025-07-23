@@ -16,8 +16,15 @@ class IsUser
      */
     public function handle($request, Closure $next)
     {
-        if(Auth::user() && (Auth::user()->role == 'USER'))
+        if (Auth::check() && Auth::user()->role == 'USER') {
             return $next($request);
-        return response('Unauthorized. <a href="javascript:history.back()">Go Back</a>', 401);
+        }
+
+        if ($request->expectsJson()) {
+            // Untuk AJAX request atau fetch()
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        return redirect('/')->with('error', 'Akses tidak diizinkan.');
     }
 }
