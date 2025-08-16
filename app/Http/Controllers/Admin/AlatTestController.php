@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AlatTestRequest;
 use App\Models\AlatTest;
 use App\Models\AlatTestItem;
+use Carbon\Carbon;
 use Hamcrest\Type\IsNumeric;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,9 +17,7 @@ class AlatTestController extends Controller
     public function json()
     {
         $data = AlatTest::withCount([
-            'items as stock' => function ($query) {
-                $query->where('status', 'tersedia');
-            }
+            'items'
         ])->get();
 
         $result = [];
@@ -26,11 +25,12 @@ class AlatTestController extends Controller
         foreach ($data as $index => $item) {
             $result[] = [
                 'DT_RowIndex' => $index + 1,
-                'photo'       => $item->photo,
-                'name'        => $item->name,
+                'photo'=> $item->photo,
+                'name' => $item->name,
                 'description' => $item->description,
-                'stock'       => $item->stock,
-                'id'          => $item->id,
+                'items_count' => $item->items_count,
+                'avaliable_stock' => $item->avaliable_stock,
+                'id' => $item->id,
             ];
         }
 
@@ -83,7 +83,7 @@ class AlatTestController extends Controller
             }
         }
 
-        return redirect()->route('alat-test-admin.index')->with('success', 'Alat test berhasil ditambahkan');
+        return redirect()->route('alat-test.index')->with('success', 'Alat test berhasil ditambahkan');
     }
 
 
@@ -126,12 +126,21 @@ class AlatTestController extends Controller
             }
         }
 
-        return redirect()->route('alat-test-admin.index')->with('success', 'Alat test berhasil diperbaharui');
+        return redirect()->route('alat-test.index')->with('success', 'Alat test berhasil diperbaharui');
     }
 
     public function show($id)
     {
-        $item = AlatTest::with('items')->findOrFail($id);
+        $item = AlatTest::with([
+                'items' => function($i) {
+                    $i->withCount(['alatTestItemBookings as bookings' => function($b) {
+                        $b->whereHas('alatTestBooking', function($c) {
+                            $c->where('date', '>', Carbon::now());
+                        });
+                    }]);
+                }
+            ])
+            ->findOrFail($id);
         return view('pages.admin.alat-test.show', compact('item'));
     }
 
@@ -150,6 +159,6 @@ class AlatTestController extends Controller
         // Hapus alat test
         $alatTest->delete();
 
-        return redirect()->route('alat-test-admin.index')->with('success', 'Data alat test berhasil dihapus.');
+        return redirect()->route('alat-test.index')->with('success', 'Data alat test berhasil dihapus.');
     }
 }

@@ -19,10 +19,10 @@
 
   @component('components.datatables')
     @slot('buttons')
-      <a href="{{ route('alat-test-admin.create') }}" class="btn btn-primary"><i class="fas fa-plus"></i>&nbsp;Tambah Alat Test</a>
+      <a href="{{ route('alat-test.create') }}" class="btn btn-primary"><i class="fas fa-plus"></i>&nbsp;Tambah Alat Test</a>
     @endslot
     
-    @slot('table_id', 'alat-table')
+    @slot('table_id', 'alat-test-table')
 
     @slot('table_header')
       <tr>
@@ -47,7 +47,7 @@
 </style>
 <script>
   $(document).ready(function() {
-    $('#booking_alats').DataTable({
+    $('#alat-test-table').DataTable({
       processing: true,
       ajax: '{{ route('alat-test.json') }}',
       columns: [
@@ -70,7 +70,7 @@
         },
         { data: 'name', name: 'name' },
         { data: 'description', name: 'description', className: 'text-wrap' },
-        { data: 'stock', name: 'stock' },
+        { data: 'items_count', name: 'items_count' },
         {
           data: 'id',
           name: 'aksi',
@@ -98,7 +98,7 @@
 
       $('.modal-title').html(title);
       $('.modal-body').html(body);
-      $('#confirm-form').attr('action', '{{ route('alat-test-admin.destroy', ':id') }}'.replace(':id', id));
+      $('#confirm-form').attr('action', '{{ route('alat-test.destroy', ':id') }}'.replace(':id', id));
       $('#confirm-form').attr('method', 'POST');
       $('#submit-btn').attr('class', 'btn btn-danger');
       $('#lara-method').attr('value', 'delete');

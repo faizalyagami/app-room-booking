@@ -19,4 +19,9 @@ class AlatTestItem extends Model
     {
         return $this->belongsTo(AlatTest::class);
     }
+
+    public function alatTestItemBookings() 
+    {
+        return $this->hasMany(AlatTestItemBooking::class);
+    }
 }

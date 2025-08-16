@@ -11,7 +11,6 @@ class AlatTestBooking extends Model
     protected $table = 'booking_alats';
 
     protected $fillable = [
-        'alat_test_id',
         'user_id',
         'date',
         'start_time',
@@ -26,9 +25,9 @@ class AlatTestBooking extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Relasi ke Alat Test
-    public function alatTest()
+    // Relasi ke Alat Test Item
+    public function alatTestItemBooking()
     {
-        return $this->belongsTo(AlatTest::class);
+        return $this->hasMany(AlatTestItemBooking::class, 'booking_alat_id', 'id');
     }
 }

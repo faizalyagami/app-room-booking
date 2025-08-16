@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use DataTables;
 
 use App\Models\BookingList;
+use Illuminate\Support\Facades\Hash;
 
 class DashboardController extends Controller
 {
@@ -28,16 +29,21 @@ class DashboardController extends Controller
         ->make(true);
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        $user = auth()->user();
         $today = Carbon::today()->toDateString();
 
-        $booking_today      = BookingList::where('user_id', Auth::user()->id)
-        ->whereDate('created_at', '=', $today)
-        ->count();
-        $booking_lifetime   = BookingList::where([
-            ['user_id', Auth::user()->id],
-        ])->count();
+        $booking_today = BookingList::where('user_id', Auth::user()->id)
+            ->whereDate('created_at', '=', $today)
+            ->count();
+        $booking_lifetime = BookingList::where([
+                ['user_id', Auth::user()->id],
+            ])->count();
+
+        if (Hash::check("mahasiswa", $user->password)) {
+            return redirect()->route('user.change-pass.index');
+        }
 
         return view('pages.user.dashboard', [
             'booking_today'     => $booking_today,

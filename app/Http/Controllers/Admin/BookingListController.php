@@ -26,6 +26,7 @@ class BookingListController extends Controller
             return [
                 'index'         => $index + 1,
                 'id'            => $item->id,
+                'photo'          => $item->room->photo ?? '-',
                 'room'          => $item->room->name ?? '-',
                 'user'          => $item->user->name ?? '-',
                 'date'          => $item->date,

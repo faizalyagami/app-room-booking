@@ -18,7 +18,7 @@
 
 @section('breadcrumbs')
   <div class="breadcrumb-item"><a href="#">Alat Test</a></div>
-  <div class="breadcrumb-item"><a href="{{ route('alat-test-admin.index') }}">Data Alat Test</a></div>
+  <div class="breadcrumb-item"><a href="{{ route('alat-test.index') }}">Data Alat Test</a></div>
   <div class="breadcrumb-item {{ isset($item) ? '' : 'active' }}">
     @if(isset($item)) <a href="#">Edit Data Alat Test</a> @else Tambah Data Alat Test @endif
   </div>
@@ -41,17 +41,17 @@
 
 @section('content')
   @component('components.form')
-    @slot('row_class', 'justify-content-center')
-    @slot('col_class', 'col-12 col-md-6')
+    @slot('row_class', '')
+    @slot('col_class', 'col-12')
 
     @if(isset($item))
       @slot('form_method', 'POST')
       @slot('method', 'PUT')
-      @slot('form_action', 'alat-test-admin.update')
+      @slot('form_action', 'alat-test.update')
       @slot('update_id', $item->id)
     @else 
       @slot('form_method', 'POST')
-      @slot('form_action', 'alat-test-admin.store')
+      @slot('form_action', 'alat-test.store')
     @endif
 
     @slot('is_form_with_file', 'true')
@@ -71,19 +71,6 @@
           @slot('form_group_class', 'required')
           @slot('other_attributes', 'required autofocus')
         @endempty
-      @endcomponent
-
-      @component('components.input-field')
-        @slot('input_label', 'Serial Number')
-        @slot('input_type', 'text')
-        @slot('input_name', 'serial_number')
-        @isset($serialNumber)
-          @slot('input_value') {{ old('serial_number', $serialNumber) }} @endslot
-        @else
-          @slot('input_value') {{ old('serial_number') }} @endslot
-        @endisset
-        @slot('form_group_class', 'required')
-        @slot('other_attributes', 'required')
       @endcomponent
 
       @component('components.input-field')

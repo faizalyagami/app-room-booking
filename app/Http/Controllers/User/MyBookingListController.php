@@ -16,7 +16,8 @@ use App\Models\User;
 use App\Jobs\SendEmail;
 
 use App\Http\Requests\User\MyBookingListRequest;
-
+use App\Models\DayTime;
+use Carbon\Carbon;
 use DataTables;
 
 class MyBookingListController extends Controller
@@ -27,8 +28,8 @@ class MyBookingListController extends Controller
         ]);
 
         return DataTables::of($data)
-        ->addIndexColumn()
-        ->make(true);
+            ->addIndexColumn()
+            ->make(true);
     }
 
     /**
@@ -48,10 +49,17 @@ class MyBookingListController extends Controller
      */
     public function create()
     {
+        $nowdate = Carbon::now();
         $rooms = Room::orderBy('name')->get();
+        $times = DayTime::distinct()->select('start_time', 'end_time')
+            ->whereNull('deleted_at')
+            ->orderBy('start_time')
+            ->get();
 
         return view('pages.user.my-booking-list.create', [
-            'rooms' => $rooms,
+            'rooms' => $rooms, 
+            'times' => $times, 
+            'nowdate' => $nowdate, 
         ]);
     }
 
@@ -63,66 +71,57 @@ class MyBookingListController extends Controller
      */
     public function store(MyBookingListRequest $request)
     {
-        $data               = $request->all();
-        $data['user_id']    = Auth::user()->id;
-        $data['status']     = 'PENDING';
+        $save = 1;
+        $time = explode(" - ", $request->time);
+        $room = Room::select('name')->where('id', $request->room_id)->firstOrFail();
+        $bookings = BookingList::where('date', $request->date)
+            ->where('room_id', $request->room_id)
+            ->where('status', 'DISETUJUI')
+            ->get();
 
-        $room               = Room::select('name')->where('id', $data['room_id'])->firstOrFail();
-
-        if(
-            BookingList::where([
-                ['date', '=', $data['date']],
-                ['room_id', '=', $data['room_id']],
-                ['status', '=', 'DISETUJUI'],
-            ])
-            ->whereBetween('start_time', [$data['start_time'], $data['end_time']])
-            ->count() <= 0 || 
-            BookingList::where([
-                ['date', '=', $data['date']],
-                ['room_id', '=', $data['room_id']],
-                ['status', '=', 'DISETUJUI'],
-            ])
-            ->whereBetween('end_time', [$data['start_time'], $data['end_time']])
-            ->count() <= 0 ||
-            BookingList::where([
-                ['date', '=', $data['date']],
-                ['room_id', '=', $data['room_id']],
-                ['start_time', '<=', $data['start_time']],
-                ['end_time', '>=', $data['end_time']],
-                ['status', '=', 'DISETUJUI'],
-            ])->count() <= 0
-        ) {
-            if(BookingList::create($data)) {
-                $request->session()->flash('alert-success', 'Booking ruang '.$room->name.' berhasil ditambahkan');
-                
-                $user_name          = $this->getUserName();
-                $user_email         = $this->getUserEmail();
-                
-                $admin      = $this->getAdminData();
-                $status     = 'DIBUAT';
-
-                $to_role    = 'USER';
-
-                // use URL::to('/') for the url value
-
-                // URL::to('/my-booking-list)
-                dispatch(new SendEmail($user_email, $user_name, $room->name, $data['date'], $data['start_time'], $data['end_time'], $data['purpose'], $to_role, $user_name, 'https://google.com', $status));
-
-                $to_role    = 'ADMIN';
-
-                // URL::to('/admin/booking-list)
-                dispatch(new SendEmail($admin->email, $user_name, $room->name, $data['date'], $data['start_time'], $data['end_time'], $data['purpose'], $to_role, $admin->name, 'https://google.com', $status));
-
-            } else {
-                $request->session()->flash('alert-failed', 'Booking ruang '.$room->name.' gagal ditambahkan');
-                return redirect()->route('my-booking-list.create');
+        if(count($bookings) > 0) {
+            foreach($bookings as $booking) {
+                if(date("H:i:s", strtotime($booking->start_time)) == date("H:i:s", strtotime($time[0]))) {
+                    $save = 0;
+                }
             }
-        } else {
-            $request->session()->flash('alert-failed', 'Ruangan '.$room->name.' di waktu itu sudah dibooking');
-            return redirect()->route('my-booking-list.create');
         }
 
-        return redirect()->route('my-booking-list.index');
+        if($save == 0 ) {
+            $request->session()->flash('alert-failed', 'Ruangan '.$room->name.' di waktu itu sudah dibooking');
+            return redirect()->route('my-booking-list.create');
+        } else {
+            $message = new BookingList();
+            $message->room_id = $request->room_id;
+            $message->user_id = auth()->user()->id;
+            $message->date = $request->date;
+            $message->start_time = $time[0];
+            $message->end_time = $time[1];
+            $message->status = 'PENDING';
+            $message->purpose = $request->purpose;
+            $message->save();
+
+            $user_name          = $this->getUserName();
+            $user_email         = $this->getUserEmail();
+            
+            $admin      = $this->getAdminData();
+            $status     = 'DIBUAT';
+
+            $to_role    = 'USER';
+
+            // use URL::to('/') for the url value
+
+            // URL::to('/my-booking-list)
+            dispatch(new SendEmail($user_email, $user_name, $room->name, $data['date'], $data['start_time'], $data['end_time'], $data['purpose'], $to_role, $user_name, 'https://google.com', $status));
+
+            $to_role    = 'ADMIN';
+
+            // URL::to('/admin/booking-list)
+            dispatch(new SendEmail($admin->email, $user_name, $room->name, $data['date'], $data['start_time'], $data['end_time'], $data['purpose'], $to_role, $admin->name, 'https://google.com', $status));
+
+            $request->session()->flash('alert-success', 'Booking ruang '.$room->name.' berhasil ditambahkan');
+            return redirect()->route('my-booking-list.index');
+        }
     }
 
     /**

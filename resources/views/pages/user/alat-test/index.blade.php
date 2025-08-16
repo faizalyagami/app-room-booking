@@ -1,31 +1,32 @@
 @extends('layouts.main')
 
-@section('title', 'Peminjaman Alat Test - ROOMING')
+@section('title', 'Data Alat Test - ROOMING')
 
-@section('header-title', 'Data Peminjaman Alat Test')
+@section('header-title', 'Data Alat Test')
 
 @section('breadcrumbs')
-  <div class="breadcrumb-item"><a href="#">Transaksi</a></div>
-  <div class="breadcrumb-item active">Data Peminjaman Alat Test</div>
+  <div class="breadcrumb-item"><a href="#">Alat Test</a></div>
+  <div class="breadcrumb-item active">Data Alat Test</div>
 @endsection
 
-@section('section-title', 'Peminjaman Alat Test')
+@section('section-title', 'Alat Test')
 
 @section('section-lead')
-  Berikut ini adalah daftar seluruh peminjaman alat test yang telah dilakukan.
+  Berikut ini adalah daftar seluruh Alat Test.
 @endsection
 
 @section('content')
 
   @component('components.datatables')
-    @slot('table_id', 'alat-booking-table')
+    @slot('table_id', 'alat-test-table')
     @slot('table_header')
       <tr>
         <th>#</th>
-        <th>Nama Alat</th>
-        <th>Tanggal Peminjaman</th>
-        <th>Keperluan</th>
-        <th>Status</th>
+        <th>Foto</th>
+        <th>Serial Number</th>
+        <th>Nama</th>
+        <th>Deskripsi</th>
+        <th>Booking</th>
       </tr>
     @endslot
   @endcomponent
@@ -33,13 +34,14 @@
 @endsection
 
 @push('after-script')
+
 <script>
   $(document).ready(function() {
-    $('#alat-booking-table').DataTable({
+    $('#alat-test-table').DataTable({
       processing: true,
       serverSide: true,
-      ajax: '{{ route('alat-test.json') }}',
-      order: [2, 'desc'],
+      ajax: '{{ route('alat-test-list.json') }}',
+      order: [2, 'asc'],
       columns: [
         {
           name: 'DT_RowIndex',
@@ -48,34 +50,50 @@
           searchable: false
         },
         {
-          name: 'alat_test',
-          data: 'alat_test'
-        },
-        {
-          name: 'borrow_date',
-          data: 'borrow_date'
-        },
-        {
-          name: 'purpose',
-          data: 'purpose'
-        },
-        {
-          name: 'status',
-          data: 'status',
-          render: function(data) {
-            if (data === 'approved') {
-              return '<span class="badge badge-success">Disetujui</span>';
-            } else if (data === 'pending') {
-              return '<span class="badge badge-warning">Menunggu</span>';
-            } else if (data === 'rejected') {
-              return '<span class="badge badge-danger">Ditolak</span>';
+          name: 'photo',
+          data: 'photo',
+          orderable: false,
+          searchable: false,
+          render: function(data, type, row) {
+            if (data != null) {
+              return `<div class="gallery gallery-fw">
+                        <a href="/storage/${data}" data-toggle="lightbox">
+                          <img src="/storage/${data}" class="img-fluid" style="min-width: 80px; height: auto;">
+                        </a>
+                      </div>`;
             } else {
-              return '<span class="badge badge-secondary">' + data + '</span>';
+              return '-';
             }
           }
         },
-      ]
+        {
+          name: 'serial_number',
+          data: 'serial_number',
+        },
+        {
+          name: 'name',
+          data: 'name',
+        },
+        {
+          name: 'description',
+          data: 'description',
+        },
+        {
+          name: 'bookings',
+          data: 'bookings',
+        },
+      ],
+    });
+
+    // Aktifkan lightbox saat gambar diklik
+    $(document).on('click', '[data-toggle="lightbox"]', function(event) {
+      event.preventDefault();
+      $(this).ekkoLightbox();
     });
   });
 </script>
+
+{{-- Lightbox plugin --}}
+@include('includes.lightbox')
+
 @endpush

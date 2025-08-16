@@ -26,89 +26,54 @@
 
 @section('content')
 
-  @component('components.form')
-    @slot('row_class', 'justify-content-center')
-    @slot('col_class', 'col-12 col-md-6')
-    
-    @slot('form_method', 'POST')
-    @slot('form_action', 'my-booking-list.store')
+<div class="row">
+  <div class="col ">
+    <div class="card">
+      <div class="card-body">
 
-    @slot('input_form')
+        <form action="{{ route('my-booking-list.store') }}" method="post" name="form-booking" id="form-booking">
+          @csrf
 
-      @component('components.input-field')
-          @slot('input_label', 'Nama Ruangan')
-          @slot('input_type', 'select')
-          @slot('select_content')
-            <option value="">Pilih Ruangan</option>
-            @foreach ($rooms as $room)
-            <option value="{{ $room->id }}"
-                {{ old('room_id') == $room->id ? 'selected' : '' }}>
-                {{ $room->name }}</option>
-            @endforeach
-          @endslot
-          @slot('input_name', 'room_id')
-          @slot('form_group_class', 'required')
-          @slot('other_attributes', 'required autofocus')
-      @endcomponent
+          <div class="form-group">
+            <label for="room_id">Nama Ruangan</label>
+            <select name="room_id" class="form-control" id="room_id">
+              <option value="">Pilih Ruangan</option>
+              @foreach ($rooms as $room)
+                <option value="{{ $room->id }}" {{ old('room_id') == $room->id ? 'selected' : '' }}>{{ $room->name }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="date">Tanggal Booking</label>
+            <input type="text" name="date" class="form-control datepicker" data-min-date="{{ $nowdate }}" id="date">
+          </div>
+          <div class="form-group">
+            <label for="time">Waktu Booking</label>
+            <select name="time" class="form-control" id="time">
+              <option value="">Pilih Waktu</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="purpose">Keperluan</label>
+            <textarea name="purpose" class="form-control" id="purpose" style="height: 185px;"></textarea>
+          </div>
+          <div class="card-footer  text-right ">
+            <button class="btn btn-primary">Simpan</button>
+            <a type="button" href="{{ route('my-booking-list.index') }}" class="btn btn-secondary">Cancel</a>
+          </div>
+        </form>
 
-      @component('components.input-field')
-          @slot('input_label', 'Tanggal Booking')
-          @slot('input_type', 'text')
-          @slot('input_name', 'date')
-          @slot('input_classes', 'datepicker')
-          @slot('form_group_class', 'required')
-          @slot('other_attributes', 'required')
-      @endcomponent
-
-      @component('components.input-field')
-          @slot('form_row', 'open')
-          @slot('col', 'col-md-6')
-          @slot('input_label', 'Waktu Mulai')
-          @slot('input_type', 'text')
-          @slot('input_id', 'start_time')
-          @slot('input_name', 'start_time')
-          @slot('placeholder', 'HH:mm')
-          @slot('input_classes', 'timepicker')
-          @slot('form_group_class', 'col required')
-          @slot('other_attributes', 'required')
-      @endcomponent
-
-      @component('components.input-field')
-          @slot('form_row', 'close')
-          @slot('col', 'col-md-6')
-          @slot('input_label', 'Waktu Selesai')
-          @slot('input_type', 'text')
-          @slot('input_id', 'end_time')
-          @slot('input_name', 'end_time')
-          @slot('placeholder', 'HH:mm')
-          @slot('input_classes', 'timepicker')
-          @slot('form_group_class', 'col required')
-          @slot('other_attributes', 'required')
-      @endcomponent
-
-      @component('components.input-field')
-          @slot('input_label', 'Keperluan')
-          @slot('input_type', 'text')
-          @slot('input_name', 'purpose')
-          @slot('form_group_class', 'required')
-          @slot('other_attributes', 'required')
-      @endcomponent
-
-    @endslot
-
-    @slot('card_footer', 'true')
-    @slot('card_footer_class', 'text-right')
-    @slot('card_footer_content')
-      @include('includes.save-cancel-btn')
-    @endslot 
-
-  @endcomponent
+      </div>
+    </div>
+  </div>
+</div>
 
 @endsection
 
 @push('after-style')
   {{-- datepicker  --}}
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/timepicker/jquery.timepicker.min.css">
   {{-- datepicker  --}}
 @endpush
 
@@ -116,7 +81,71 @@
   {{-- datepicker  --}}
   <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/timepicker/jquery.timepicker.min.js"></script>
   {{-- datepicker  --}}
+
+  <script>
+    window.getTimes = function () {
+      var date = $("#date").val();
+      var room = $("#room_id").val();
+      var ajaxurl = "/day-times/get-times";
+
+      if(date != "" && room != "") {
+        $.ajax({
+          url: ajaxurl, 
+          dataType: 'JSON', 
+          type: 'GET', 
+          async: false, 
+          data: {
+            date: date, 
+            room: room
+          }, 
+          success: function success(response) {
+            var days = response.data;
+
+            if(response.status == 'success') {
+              if(days != null) {
+                let bookings = days.bookings;
+                let html = `<option value="">Pilih Waktu</option>`;
+                let booked = '';
+                
+                days.times.map( (item, index) => {
+                  let start = item.start_time.substring(0, item.start_time.lastIndexOf(':'));
+                  let end = item.end_time.substring(0, item.end_time.lastIndexOf(':'));
+
+                  if(bookings && bookings.length > 0) {
+                    booked = '';
+                    if(bookings.indexOf(item.start_time) != -1) {
+                      booked = '(Booked)';
+                    }
+                  }
+
+                  html += `
+                    <option `+ (booked != '' ? 'disabled' : '') +` value="`+ start +` - `+ end +`">`+ start +` - `+ end +` `+ booked +`</option>
+                  `;
+                });
+
+                $("#time").html(html);
+              }
+            } else {
+              $("#time").html(`<option value="">Pilih Waktu</option>`);
+              console.log(response.message);
+            }
+          }
+        });
+      } else {
+        $("#time").html(`<option value="">Pilih Waktu</option>`);
+      }
+    }
+
+    $("#date").on('change', function() {
+      getTimes();
+    });
+
+    $("#room_id").on('change', function() {
+      getTimes();
+    });
+  </script>
 @endpush
 
 @include('includes.notification')

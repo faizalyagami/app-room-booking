@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\AlatTestController as AdminAlatTestController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
@@ -12,9 +11,11 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoomController;
 use App\Http\Controllers\Admin\BookingListController;
 
+use App\Http\Controllers\Admin\AlatTestController as AdminAlatTestController;
+use App\Http\Controllers\Admin\AlatTestBookingListController;
+
 use App\Http\Controllers\ChangePassController;
 use App\Http\Controllers\User\AlatTestListController;
-use App\Http\Controllers\Admin\AlatTestController;
 use App\Http\Controllers\User\AlatTestBookingController;
 use Illuminate\Support\Facades\Auth;
 
@@ -49,6 +50,14 @@ Route::prefix('/')
     ->middleware(['auth', 'which.home'])
     ->name('user.dashboard');
 
+Route::group(['namespace' => 'App\Http\Controllers'] , function() {
+
+    Route::group(['prefix' => 'day-times', 'as' => 'day-times.'], function() {
+        Route::get('get-times', 'DayTimeController@getTimes')->name('get-times');
+    });
+    
+});
+
 Route::prefix('/')
     ->middleware(['auth', 'is.user'])
     ->group(function () {
@@ -58,6 +67,8 @@ Route::prefix('/')
             ->name('room-list.json');
         Route::get('/room', [RoomListController::class, 'index'])
             ->name('room-list.index');
+        Route::get('/room/{id}', [RoomListController::class, 'show'])
+            ->name('room-list.show');
 
         Route::get('/my-booking-list/json', [MyBookingListController::class, 'json'])
             ->name('my-booking-list.json');
@@ -70,8 +81,12 @@ Route::prefix('/')
         Route::put('/my-booking-list/{id}/cancel', [MyBookingListController::class, 'cancel'])
             ->name('my-booking-list.cancel');
 
-        Route::get('/alat-test', [AlatTestListController::class, 'index'])
-            ->name('alat-test.index');
+        Route::get('/alat-test-list/json', [AlatTestListController::class, 'json'])
+            ->name('alat-test-list.json');
+        Route::get('/alat-test-list/get-tools', [AlatTestListController::class, 'getTools'])
+            ->name('alat-test-list.-get-tools');
+        Route::get('/alat-test-list', [AlatTestListController::class, 'index'])
+            ->name('alat-test-list.index');
         // Route::get('/mail', function () {
         //     Mail::to('fajarwindhuzulfikar@gmail.com')
         //         ->send(new \App\Mail\BookingMail('Booking Ruangan 3', 'Admin'));
@@ -81,7 +96,7 @@ Route::prefix('/')
         Route::get('/my-booking-alat-test-list', [AlatTestBookingController::class, 'index'])
             ->name('my-booking-alat-test-list.index');
 
-        Route::get('/my-booking-alat-test-list/json', [AlatTestBookingController::class, 'json'])->name('alat-test-booking.json');
+        Route::get('/my-booking-alat-test-list/json', [AlatTestBookingController::class, 'json'])->name('my-booking-alat-test-list.json');
 
         Route::get('/my-booking-alat-test-list/create', [AlatTestBookingController::class, 'create'])
             ->name('my-booking-alat-test-list.create');
@@ -89,14 +104,17 @@ Route::prefix('/')
         Route::post('/my-booking-alat-test-list/store', [AlatTestBookingController::class, 'store'])
             ->name('my-booking-alat-test-list.store');
 
+        Route::get('/my-booking-alat-test-list/{id}/show', [AlatTestBookingController::class, 'show'])
+            ->name('my-booking-alat-test-list.show');
+
         Route::get('/my-booking-alat-test-list/{id}/edit', [AlatTestBookingController::class, 'edit'])
             ->name('my-booking-alat-test-list.edit');
 
-        Route::put('/my-booking-alat-test-list/{id}/update', [AlatTestBookingController::class, 'update'])
+        Route::patch('/my-booking-alat-test-list/{id}/update', [AlatTestBookingController::class, 'update'])
             ->name('my-booking-alat-test-list.update');
 
-        Route::delete('/my-booking-alat-test-list/{id}/delete', [AlatTestBookingController::class, 'destroy'])
-            ->name('my-booking-alat-test-list.destroy');
+        Route::put('/my-booking-alat-test-list/{id}/cancel', [AlatTestBookingController::class, 'cancel'])
+            ->name('my-booking-alat-test-list.cancel');
     });
 
 Route::prefix('admin')
@@ -126,8 +144,20 @@ Route::prefix('admin')
         Route::put('/booking-list/{id}/update/{value}', [BookingListController::class, 'update'])
             ->name('booking-list.update');
 
+        Route::get('/alat-test-booking-list/json', [AlatTestBookingListController::class, 'json'])
+            ->name('alat-test-booking-list.json');
+
+        Route::get('/alat-test-booking-list', [AlatTestBookingListController::class, 'index'])
+            ->name('alat-test-booking-list.index');
+
+        Route::get('/alat-test-booking-list/{id}/show', [AlatTestBookingListController::class, 'show'])
+            ->name('alat-test-booking-list.show');
+
+        Route::put('/alat-test-booking-list/{id}/update/{value}', [AlatTestBookingListController::class, 'update'])
+            ->name('alat-test-booking-list.update');
+
         Route::get('/alat-test/json', [AdminAlatTestController::class, 'json'])->name('alat-test.json');
-        Route::resource('alat-test', AdminAlatTestController::class)->names('alat-test-admin');
+        Route::resource('alat-test', AdminAlatTestController::class)->names('alat-test');
 
         Route::resources([
             'user'          => UserController::class,
@@ -147,12 +177,12 @@ Route::prefix('admin')
 | can be used by either USER nor ADMIN.
 */
 
-$users = [
+$users2 = [
     '/',
     'admin',
 ];
 
-foreach ($users as $user) {
+foreach ($users2 as $user) {
     Route::prefix($user)
         ->middleware(['auth'])
         ->group(function () use ($user) {

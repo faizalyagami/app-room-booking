@@ -44,7 +44,9 @@
                 
               </div>
             </section>
-          </div>    
+          </div>
+
+          @yield('modal-box')
 
           @include('includes.main.footer')
       </div>

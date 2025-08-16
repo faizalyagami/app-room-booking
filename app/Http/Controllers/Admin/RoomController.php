@@ -8,7 +8,8 @@ use Illuminate\Http\Request;
 use App\Models\Room;
 
 use App\Http\Requests\Admin\RoomRequest;
-
+use App\Models\BookingList;
+use Carbon\Carbon;
 use DataTables;
 
 class RoomController extends Controller
@@ -76,7 +77,15 @@ class RoomController extends Controller
      */
     public function show($id)
     {
-        //
+        $item = Room::findOrFail($id);
+        $bookings = BookingList::where('room_id', $id)
+            ->where('date', '>', Carbon::now())
+            ->get();
+
+        return view('pages.admin.room.show', [
+            'item'  => $item, 
+            'bookings' => $bookings
+        ]);
     }
 
     /**

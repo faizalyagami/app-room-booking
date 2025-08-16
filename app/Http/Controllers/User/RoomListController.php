@@ -3,14 +3,35 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\BookingList;
 use Illuminate\Http\Request;
 use App\Models\Room;
+use Carbon\Carbon;
 
 class RoomListController extends Controller
 {
     public function index()
     {
         return view('pages.user.room.index');
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        $item = Room::findOrFail($id);
+        $bookings = BookingList::where('room_id', $id)
+            ->where('date', '>', Carbon::now())
+            ->get();
+
+        return view('pages.user.room.show', [
+            'item'  => $item, 
+            'bookings' => $bookings
+        ]);
     }
 
     public function json(Request $request)
@@ -34,6 +55,10 @@ class RoomListController extends Controller
         $orderDir = $request->input('order.0.dir') ?? 'asc';
         $query->orderBy($orderColumn, $orderDir);
 
+        $query->withCount(['bookings' => function($b) {
+            $b->where('date', '>', Carbon::now());
+        }]);
+
         $total = Room::count();
         $filtered = $query->count();
 
@@ -46,11 +71,13 @@ class RoomListController extends Controller
         $data = [];
         foreach ($rooms as $index => $room) {
             $data[] = [
+                'id' => $room->id, 
                 'DT_RowIndex' => $start + $index + 1,
                 'photo' => $room->photo,
                 'name' => $room->name,
                 'description' => $room->description,
                 'capacity' => $room->capacity,
+                'booking' => $room->bookings_count,
             ];
         }
 

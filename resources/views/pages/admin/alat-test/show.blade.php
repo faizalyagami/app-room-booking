@@ -5,7 +5,7 @@
 @section('header-title', 'Detail Alat Test')
 
 @section('breadcrumbs')
-  <div class="breadcrumb-item"><a href="{{ route('alat-test-admin.index') }}">Alat Test</a></div>
+  <div class="breadcrumb-item"><a href="{{ route('alat-test.index') }}">Alat Test</a></div>
   <div class="breadcrumb-item active">Detail Alat Test</div>
 @endsection
 
@@ -43,32 +43,33 @@
                 <th>Total Unit</th>
                 <td>{{ $item->stock }}</td>
             </tr>
+          </table>
+          
+          <br />
+
+          <table class="table table-sm" style="margin-left: 21px;">
             <tr>
-                <th>Unit Tersedia</th>
-                <td>{{ $item->avaliable_stock }}</td>
+                <th>No.</th>
+                <th>Serial Number</th>
+                <th>Booking</th>
             </tr>
-            <tr>
-                <th>Unit Dipinjam</th>
-                <td><span class="badge badge-warning">{{ $item->borrowed_stock }} Unit</span></td>
-            </tr>
-            <tr>
-                <th>Daftar Serial Number</th>
-                <td>
-                <ul>
-                    @forelse ($item->items as $unit)
-                    <li>
-                        {{ $unit->serial_number }} -
-                        <span class="badge badge-{{ $unit->status == 'tersedia' ? 'success' : 'warning' }}">
-                        {{ ucfirst($unit->status) }}
-                        </span>
-                    </li>
-                    @empty
-                    <li><em>Tidak ada unit.</em></li>
-                    @endforelse
-                </ul>
-                </td>
-            </tr>
-            </table>
+            @forelse ($item->items as $key => $unit)
+              <tr>
+                <td>{{ $key + 1 }}</td>
+                <td>{{ $unit->serial_number }}</td>
+                <td><a href="{{ route('alat-test-booking-list.index') }}">{{ $unit->bookings }}</a></td>
+                {{-- <td>
+                  <span class="badge badge-{{ $unit->status == 'tersedia' ? 'success' : 'warning' }}">
+                    {{ ucfirst($unit->status) }}
+                  </span>
+                </td> --}}
+              </tr>
+            @empty
+              <tr>
+                <td colspan="3">Tidak ada unit.</td>
+              </tr>
+            @endforelse
+          </table>
         </div>
       </div>
     </div>

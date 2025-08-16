@@ -3,94 +3,192 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\User\AlatTestBookingRequest;
-use App\Models\AlatTest;
-use App\Models\BookingAlat;
-use App\Models\User;
+use App\Http\Requests\User\MyBookingAlatTestListRequest;
 use Illuminate\Http\Request;
+
+use Illuminate\Support\Facades\Auth;
+
+use App\Models\BookingList;
+use App\Models\Room;
+use App\Models\User;
+
+use App\Jobs\SendEmail;
+
+use App\Models\AlatTestBooking;
+use App\Models\AlatTestItem;
+use App\Models\AlatTestItemBooking;
+use App\Models\DayTime;
+use Carbon\Carbon;
+use DataTables;
 
 class AlatTestBookingController extends Controller
 {
-    public function json()
-    {
-        $userId = auth()->id();
-
-        if (!$userId) {
-            return response()->json([
-                'message' => 'Unauthorized',
-                'data' => [],
-            ], 401);
-        }
-
-        $data = BookingAlat::with('alatTest')
-            ->where('user_id', $userId)
-            ->latest()
-            ->get();
-
-        $result = $data->map(function ($item, $index) {
-            return [
-                'DT_RowIndex' => $index + 1,
-                'alat_test' => $item->alatTest->name ?? 'N/A',
-                'date' => $item->date,
-                'start_time' => $item->start_time,
-                'end_time' => $item->end_time,
-                'purpose' => $item->purpose,
-                'status' => $item->status,
-            ];
-        });
-
-        return response()->json([
-            'data' => $result
+    public function json(){
+        $data = AlatTestBooking::where('user_id', Auth::user()->id)->with([
+            'alatTestItemBooking.alatTestItem.alatTest'
         ]);
+
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->make(true);
     }
 
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function index()
     {
-        $bookings = BookingAlat::with('user', 'alatTest')->latest()->get();
-        return view('pages.user.alat-test.index', compact('bookings'));
+        return view('pages.user.my-booking-alat-test-list.index');
     }
 
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function create()
     {
-        $alatTests = AlatTest::all();
-        return view('pages.user.alat-test.create', compact('alatTests'));
-    }
+        $nowdate = Carbon::now();
+        $hours = [
+            '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', 
+            '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', 
+            '20', '21', '22', '23' 
+        ];
+        $minutes = [
+            '00', '30'
+        ];
+        $items = AlatTestItem::with(['alatTest'])->orderBy('serial_number')->get();
 
-    public function store(AlatTestBookingRequest $request)
-    {
-        BookingAlat::create([
-            'alat_test_id' => $request->alat_test_id,
-            'user_id' => auth()->id(), // ambil user dari auth
-            'date' => $request->date,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'purpose' => $request->purpose,
-            'status' => 'pending',
+        return view('pages.user.my-booking-alat-test-list.create', [
+            'hours' => $hours, 
+            'minutes' => $minutes, 
+            'nowdate' => $nowdate, 
+            'items' => $items, 
         ]);
-
-        return redirect()->route('alat-test-booking.index')->with('success', 'Booking alat test berhasil disimpan.');
     }
 
-    public function edit($id)
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(MyBookingAlatTestListRequest $request)
     {
-        $booking = BookingAlat::findOrFail($id);
-        $alatTests = AlatTest::all();
-        return view('pages.user.alat-test.edit', compact('booking', 'alatTests'));
+        $message = new AlatTestBooking();
+        $message->user_id = auth()->user()->id;
+        $message->date = $request->date;
+        $message->start_time = implode(":", $request->time_start);
+        $message->end_time = implode(":", $request->time_end);
+        $message->status = 'PENDING';
+        $message->purpose = $request->purpose;
+        $message->save();
+
+        foreach($request->items as $item) {
+            $messageItem = new AlatTestItemBooking();
+            $messageItem->booking_alat_id = $message->id;
+            $messageItem->alat_test_item_id= $item;
+            $messageItem->save();
+        }
+
+        $request->session()->flash('alert-success', 'Booking alat test berhasil ditambahkan');
+        return redirect()->route('my-booking-alat-test-list.index');
     }
 
-    public function update(AlatTestBookingRequest $request, $id)
+    public function show($id) 
     {
-        $booking = BookingAlat::findOrFail($id);
-        $booking->update($request->validated());
+        $tool = AlatTestBooking::whereId($id)
+            ->with(['alatTestItemBooking.alatTestItem.alatTest'])
+            ->first();
 
-        return redirect()->route('alat-test-booking.index')->with('success', 'Booking berhasil diperbarui.');
+        return view('pages.user.my-booking-alat-test-list.show', compact(
+            'tool'
+        ));
     }
 
-    public function destroy($id)
+    public function edit($id) 
     {
-        $booking = BookingAlat::findOrFail($id);
-        $booking->delete();
+        $nowdate = Carbon::now();
+        $hours = [
+            '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', 
+            '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', 
+            '20', '21', '22', '23' 
+        ];
+        $minutes = [
+            '00', '30'
+        ];
+        $tool = AlatTestBooking::whereId($id)
+            ->with(['alatTestItemBooking.alatTestItem.alatTest'])
+            ->first();
 
-        return redirect()->route('alat-test-booking.index')->with('success', 'Booking berhasil dihapus.');
+        return view('pages.user.my-booking-alat-test-list.edit', compact(
+            'nowdate', 'hours', 'minutes', 'tool'
+        ));
+    }
+
+    public function update(MyBookingAlatTestListRequest $request, $id)
+    {
+        $message = AlatTestBooking::whereId($id)->first();
+        if($message !== null) {
+            $message->user_id = auth()->user()->id;
+            $message->date = $request->date;
+            $message->start_time = implode(":", $request->time_start);
+            $message->end_time = implode(":", $request->time_end);
+            $message->status = 'PENDING';
+            $message->purpose = $request->purpose;
+            $message->save();
+
+            AlatTestItemBooking::where('booking_alat_id', $id)->delete();
+
+            foreach($request->items as $item) {
+                $messageItem = new AlatTestItemBooking();
+                $messageItem->booking_alat_id = $message->id;
+                $messageItem->alat_test_item_id= $item;
+                $messageItem->save();
+            }
+
+            $request->session()->flash('alert-failed', 'Booking alat test berhasil diupdate');
+            return redirect()->route('my-booking-alat-test-list.show', [ $id ]);
+        }
+
+        $request->session()->flash('alert-failed', 'Booking alat test gagal diupdate');
+        return redirect()->route('my-booking-alat-test-list.show', [ $id ]);
+    }
+
+    /**
+     * Cancel the specified data.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function cancel($id)
+    {
+        $tool = AlatTestBooking::whereId($id)->first();
+
+        if($tool !== null) {
+            $tool->status = 'BATAL';
+            $tool->save();
+
+            session()->flash('alert-success', 'Booking Alat Test berhasil dibatalkan');
+            return redirect()->route('my-booking-alat-test-list.index');
+        }
+
+        session()->flash('alert-failed', 'Booking Alat Test gagal dibatalkan');
+        return redirect()->route('my-booking-alat-test-list.index');
+    }
+
+    public function getAdminData() {
+        return User::select('name','email')->where('role', 'ADMIN')->firstOrFail();
+    }
+
+    public function getUserName() {
+        return Auth::user()->name;
+    }
+
+    public function getUserEmail() {
+        return Auth::user()->email;
     }
 }
