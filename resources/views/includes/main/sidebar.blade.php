@@ -20,7 +20,7 @@
         </li>
         <li class="menu-header">ALAT TEST</li>
         <li class="{{ request()->is('alat-test*') ? 'active' : '' }}">
-          <a class="nav-link" href="{{ route('alat-test.index') }}">
+          <a class="nav-link" href="{{ route('alat-test-list.index') }}">
             <i class="fa solid fa-swatchbook"></i> <span>List Alat Test</span>
           </a>
         </li>
@@ -59,7 +59,7 @@
           </a>
         </li>
         <li class="{{ request()->is('admin/alat-test*') ? 'active' : '' }}">
-          <a class="nav-link" href="{{ route('alat-test-list.index') }}">
+          <a class="nav-link" href="{{ route('alat-test.index') }}">
             <i class="fas fa-toolbox"></i><span>Alat Test Psikologi</span>
           </a>
         </li>
@@ -74,6 +74,12 @@
           <a class="nav-link" href="{{ route('booking-list.index') }}">
             @inject('booking_list', 'App\Models\BookingList')
             <i class="fas fa-list"></i> <span>{{ $booking_list->where("status", "PENDING")->count() > 0 ? '('.$booking_list->where("status", "PENDING")->count().')' : '' }} Booking List</span>
+          </a>
+        </li>
+        <li class="{{ request()->is('admin/alat-test-booking-list*') ? 'active' : '' }}">
+          <a class="nav-link" href="{{ route('alat-test-booking-list.index') }}">
+            @inject('tool_booking_list', 'App\Models\AlatTestBooking')
+            <i class="fas fa-list"></i> <span>{{ $tool_booking_list->where("status", "!=", "tersedia")->count() > 0 ? '('.$tool_booking_list->where("status", "!=", "tersedia")->count().')' : '' }} Alat test Booking List</span>
           </a>
         </li>
 

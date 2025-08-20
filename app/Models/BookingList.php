@@ -35,10 +35,10 @@ class BookingList extends Model
     ];
 
     public function room(){
-        return $this->hasOne(Room::class, 'id', 'room_id');
+        return $this->belongsTo(Room::class, 'room_id', 'id');
     }
 
     public function user(){
-        return $this->hasOne(User::class, 'id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 }

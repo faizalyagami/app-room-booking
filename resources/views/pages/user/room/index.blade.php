@@ -26,6 +26,7 @@
         <th>Nama</th>
         <th>Deskripsi</th>
         <th>Kapasitas</th>
+        <th>Booking</th>
       </tr>
     @endslot
   @endcomponent
@@ -76,6 +77,17 @@
         {
           name: 'capacity',
           data: 'capacity',
+        },
+        {
+          name: 'booking',
+          data: 'booking',
+          render: function(data, type, row) {
+            if (data != null) {
+              return `<a href="room/${ row.id }" class="text-primary">${ data }</a>`;
+            } else {
+              return '-';
+            }
+          }
         },
       ],
     });

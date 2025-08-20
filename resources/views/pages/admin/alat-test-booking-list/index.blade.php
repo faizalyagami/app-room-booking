@@ -1,18 +1,18 @@
 @extends('layouts.main')
 
-@section('title', 'Booking List - ROOMING')
+@section('title', 'Alat Test Booking List - ROOMING')
 
-@section('header-title', 'Booking List')
+@section('header-title', 'Alat Test Booking List')
 
 @section('breadcrumbs')
   <div class="breadcrumb-item"><a href="#">Transaksi</a></div>
-  <div class="breadcrumb-item active">Booking List</div>
+  <div class="breadcrumb-item active">Alat Test Booking List 1</div>
 @endsection
 
-@section('section-title', 'Booking List')
+@section('section-title', 'Alat Test Booking List')
 
 @section('section-lead')
-  Berikut ini adalah daftar seluruh booking dari setiap user.
+  Berikut ini adalah daftar seluruh booking alat test dari setiap user.
 @endsection
 
 @section('content')
@@ -21,8 +21,6 @@
     @slot('table_header')
       <tr>
         <th>#</th>
-        <th>Foto</th>
-        <th>Ruangan</th>
         <th>User</th>
         <th>Tanggal</th>
         <th>Waktu Mulai</th>
@@ -42,22 +40,22 @@ $(document).ready(function() {
   $('#booking-list-table').DataTable({
     processing: true,
     serverSide: false, // client-side saja
-    ajax: '{{ route('booking-list.json') }}',
+    ajax: '{{ route('alat-test-booking-list.json') }}',
     columnDefs: [
       {
-        targets: [4],
-        orderData: [4, 5]
+        targets: [2],
+        orderData: [2, 3]
       },
       {
-        targets: [5],
-        orderData: [5, 4]
+        targets: [3],
+        orderData: [3, 2]
       },
       {
-        targets: 7,
+        targets: 3,
         render: $.fn.dataTable.render.ellipsis(20, true)
       },
     ],
-    order: [[4, 'desc'], [5, 'desc']],
+    order: [[2, 'desc'], [3, 'desc']],
     columns: [
       {
         data: 'index',
@@ -65,55 +63,19 @@ $(document).ready(function() {
         searchable: false
       },
       {
-        data: 'photo',
-        orderable: false,
-        searchable: false,
-        render: function (data, type, row) {
-          if (data) {
-            return `<div class="gallery gallery-fw">
-                      <a href="/storage/${data}" data-toggle="lightbox">
-                        <img src="/storage/${data}" class="img-fluid" style="min-width: 80px; height: auto;">
-                      </a>
-                    </div>`;
-          } else {
-            return '-';
-          }
-        }
-      },
-      {
-        data: 'room',
+        data: 'user',
         orderable: false,
         render: function (data, type, row) {
           let result = data;
           const now = new Date();
           const dt = new Date(`${row.date}T${row.start_time}`);
+
           result += '<div class="table-links">';
-
-          if (dt > now && (row.status === 'PENDING' || row.status === 'DITOLAK')) {
-            result += ` 
-              <a href="javascript:;" data-id="${row.id}" 
-                data-title="Setujui" data-body="Yakin setujui booking ini?" 
-                data-value="1" class="text-primary" id="acc-btn">Setujui
-              </a>`;
-
-            if (row.status === 'PENDING') {
-              result += '<div class="bullet"></div>';
-            }
-          }
-
-          if (row.status === 'PENDING' || row.status === 'DISETUJUI') {
-            result += ` <a href="javascript:;" data-id="${row.id}" 
-                            data-title="Tolak" data-body="Yakin tolak booking ini?" 
-                            data-value="0" class="text-danger" id="deny-btn">Tolak</a>`;
-          }
-
+          result += `<a href="alat-test-booking-list/${ row.id }/show" class="text-info">Detail</a>`;
           result += '</div>';
+
           return result;
         }
-      },
-      {
-        data: 'user',
-        orderable: false
       },
       {
         data: 'date'
@@ -131,13 +93,8 @@ $(document).ready(function() {
         data: 'status',
         render: function (data) {
           let badgeClass = {
-            'PENDING': 'info',
-            'DISETUJUI': 'primary',
-            'DIGUNAKAN': 'primary',
-            'DITOLAK': 'danger',
-            'EXPIRED': 'warning',
-            'BATAL': 'warning',
-            'SELESAI': 'success'
+            'tersedia': 'info',
+            'dipinjam': 'primary',
           }[data] || 'secondary';
 
           return `<span class="badge badge-${badgeClass}">${data}</span>`;

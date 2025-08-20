@@ -106,7 +106,7 @@
           }
         
           if(row.status === 'PENDING' || row.status === 'DISETUJUI') {
-            result += ' <a href="javascript:;" data-id="'+row.id+'" '
+            result += ' <a href="javascript:void(0)" data-id="'+row.id+'" '
             + ' data-title="Batalkan"'
             + ' data-body="Yakin batalkan booking ini?"'
             + ' class="text-danger"'

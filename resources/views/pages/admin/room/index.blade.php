@@ -89,7 +89,12 @@
             result += '<div class="table-links">';
           }
 
-          result += '<a href="room/'+row.id+'/edit"'
+          result += '<a href="room/'+row.id+'"'
+          + ' class="text-success">Detail</a>'
+
+          + ' <div class="bullet"></div>'
+          
+          + '<a href="room/'+row.id+'/edit"'
           + ' class="text-primary">Edit</a>'
 
           + ' <div class="bullet"></div>'

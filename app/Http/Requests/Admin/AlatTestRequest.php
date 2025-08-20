@@ -27,7 +27,7 @@ class AlatTestRequest extends FormRequest
             'name' => 'required|string',
             'description' => 'nullable|string',
             'stock' => 'required|integer',
-            'serial_number' => 'required|string', // hanya validasi textarea pertama
+            // 'serial_number' => 'required|string', // hanya validasi textarea pertama
             'photo' => 'nullable|image|max:2048',
         ];
     }

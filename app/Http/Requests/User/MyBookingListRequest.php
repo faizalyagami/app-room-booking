@@ -28,18 +28,18 @@ class MyBookingListRequest extends FormRequest
         $rules = [
             'room_id'           => 'required|integer|exists:rooms,id',
             'date'              => 'required|date_format:Y-m-d|after_or_equal:today',
-            'end_time'          => 'required|date_format:H:i|after:start_time',
+            'time'              => 'required',
             'purpose'           => 'required|string|max:100',
         ];
 
-        $today = Carbon::now()->toDateString();
-        $now = Carbon::now()->format('H:i');
+        // $today = Carbon::now()->toDateString();
+        // $now = Carbon::now()->format('H:i');
 
-        if ($this->input('date') == $today) {
-            $rules['start_time'] = 'required|date_format:H:i|before:end_time|after:'.$now;
-        } else {
-            $rules['start_time'] = 'required|date_format:H:i|before:end_time';
-        }
+        // if ($this->input('date') == $today) {
+        //     $rules['start_time'] = 'required|date_format:H:i|before:end_time|after:'.$now;
+        // } else {
+        //     $rules['start_time'] = 'required|date_format:H:i|before:end_time';
+        // }
 
         return $rules;
     }
