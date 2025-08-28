@@ -51,12 +51,17 @@
                         data-value="1" class="btn btn-primary" id="acc-btn">
                       Setujui
                     </a>
+                    <a href="javascript:void(0);" data-id="{{ $booking->id }}" 
+                        data-title="Tolak" data-body="Yakin tolak booking ini?" 
+                        data-value="0" class="btn btn-danger" id="deny-btn">
+                      Tolak
+                    </a>
                   @elseif($booking->status === 'DISETUJUI')
-                  <a href="javascript:void(0);" data-id="{{ $booking->id }}" 
-                      data-title="Tolak" data-body="Yakin tolak booking ini?" 
-                      data-value="0" class="btn btn-danger" id="deny-btn">
-                    Tolak
-                  </a>
+                    <a href="javascript:void(0);" data-id="{{ $booking->id }}" 
+                        data-title="Tolak" data-body="Yakin tolak booking ini?" 
+                        data-value="0" class="btn btn-danger" id="deny-btn">
+                      Tolak
+                    </a>
                   @endif
                 </td>
             </tr>

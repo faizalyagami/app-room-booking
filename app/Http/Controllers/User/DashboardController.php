@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\BookingAlat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -41,6 +42,13 @@ class DashboardController extends Controller
                 ['user_id', Auth::user()->id],
             ])->count();
 
+        $booking_tool_today = BookingAlat::where('user_id', Auth::user()->id)
+            ->whereDate('created_at', '=', $today)
+            ->count();
+        $booking_tool_lifetime = BookingAlat::where([
+                ['user_id', Auth::user()->id],
+            ])->count();
+
         if (Hash::check("mahasiswa", $user->password)) {
             return redirect()->route('user.change-pass.index');
         }
@@ -48,6 +56,8 @@ class DashboardController extends Controller
         return view('pages.user.dashboard', [
             'booking_today'     => $booking_today,
             'booking_lifetime'  => $booking_lifetime,
+            'booking_tool_today'     => $booking_tool_today,
+            'booking_tool_lifetime'  => $booking_tool_lifetime,
         ]);
     }
 }
