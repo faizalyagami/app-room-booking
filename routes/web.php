@@ -32,7 +32,7 @@ use Illuminate\Support\Facades\Auth;
 |
 */
 
-Auth::routes(['register' => false, 'reset' => false, 'verify' => false]);
+Auth::routes(['register' => true, 'reset' => false, 'verify' => false]);
 
 Route::prefix('/')
     ->get('/', [UserDashboardController::class, 'index'])
