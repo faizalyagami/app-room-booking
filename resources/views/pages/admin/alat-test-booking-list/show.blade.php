@@ -62,6 +62,12 @@
                         data-value="0" class="btn btn-danger" id="deny-btn">
                       Tolak
                     </a>
+
+                    <a href="javascript:void(0);" data-id="{{ $booking->id }}" 
+                      data-title="Terima" data-body="Pastikan barang sudah diterima!" 
+                      data-value="2" class="btn btn-info" id="receive-btn">
+                    Terima Alat Test
+                  </a>
                   @endif
                 </td>
             </tr>
@@ -96,7 +102,7 @@
 @push('after-script')
   <script>
     $(document).ready(function() {
-      $(document).on('click', '#acc-btn, #deny-btn', function() {
+      $(document).on('click', '#acc-btn, #deny-btn, #receive-btn', function() {
         let id = $(this).data('id');
         let title = $(this).data('title');
         let body = $(this).data('body');

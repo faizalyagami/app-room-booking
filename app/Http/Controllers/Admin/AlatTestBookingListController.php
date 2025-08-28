@@ -83,6 +83,8 @@ class AlatTestBookingListController extends Controller
 
         if ($value == 1) {
             $data['status'] = 'DISETUJUI';
+        } else if ($value == 2) {
+            $data['status'] = 'DIKEMBALIKAN';
         } else if ($value == 0) {
             $data['status'] = 'DITOLAK';
         } else {
@@ -133,6 +135,22 @@ class AlatTestBookingListController extends Controller
                     session()->flash('alert-failed', 'Alat test di waktu itu sudah dibooking');
                 }
             } elseif ($data['status'] == 'DITOLAK') {
+                if ($item->update($data)) {
+                    session()->flash('alert-success', 'Booking Alat Test sekarang ' . $data['status']);
+
+                    // $to_role    = 'USER';
+
+                    // // URL::to('/my-booking-list)
+                    // dispatch(new SendEmail($user_email, $user_name, $item->room->name, $item['date'], $item['start_time'], $item['end_time'], $item['purpose'], $to_role, $user_name, 'https://google.com', $data['status']));
+
+                    // $to_role    = 'ADMIN';
+
+                    // // URL::to('/admin/booking-list)
+                    // dispatch(new SendEmail($admin_email, $user_name, $item->room->name, $item['date'], $item['start_time'], $item['end_time'], $item['purpose'], $to_role, $admin_name, 'https://google.com', $data['status']));
+                } else {
+                    session()->flash('alert-failed', 'Booking Alat Test gagal diupdate');
+                }
+            } elseif ($data['status'] == 'DIKEMBALIKAN') {
                 if ($item->update($data)) {
                     session()->flash('alert-success', 'Booking Alat Test sekarang ' . $data['status']);
 
