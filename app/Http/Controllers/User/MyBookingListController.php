@@ -101,23 +101,46 @@ class MyBookingListController extends Controller
             $message->purpose = $request->purpose;
             $message->save();
 
-            $user_name          = $this->getUserName();
-            $user_email         = $this->getUserEmail();
-            
-            $admin      = $this->getAdminData();
-            $status     = 'DIBUAT';
+            // Ambil data user & admin
+            $user   = Auth::user();
+            $admin  = $this->getAdminData();
+            $status = 'DIBUAT';
 
-            $to_role    = 'USER';
+            // Email ke USER
+dispatch(new SendEmail(
+    [$user->email], 
+    'room', // type
+    [
+        'user_name'     => $user->name,
+        'room_name'     => $room->name,
+        'date'          => $request->date,
+        'start_time'    => $time[0],
+        'end_time'      => $time[1],
+        'purpose'       => $request->purpose,
+        'to_role'       => 'USER',
+        'receiver_name' => $user->name,
+        'url'           => URL::to('/my-booking-list'),
+        'status'        => $status,
+    ]
+));
 
-            // use URL::to('/') for the url value
-
-            // URL::to('/my-booking-list)
-            dispatch(new SendEmail($user_email, $user_name, $room->name, $data['date'], $data['start_time'], $data['end_time'], $data['purpose'], $to_role, $user_name, 'https://google.com', $status));
-
-            $to_role    = 'ADMIN';
-
-            // URL::to('/admin/booking-list)
-            dispatch(new SendEmail($admin->email, $user_name, $room->name, $data['date'], $data['start_time'], $data['end_time'], $data['purpose'], $to_role, $admin->name, 'https://google.com', $status));
+            // Email ke ADMIN
+            dispatch(new SendEmail(
+                [$admin->email], 
+                'room', // type
+                [
+                    'user_name'     => $user->name,
+                    'room_name'     => $room->name,
+                    'date'          => $request->date,
+                    'start_time'    => $time[0],
+                    'end_time'      => $time[1],
+                    'purpose'       => $request->purpose,
+                    'to_role'       => 'ADMIN',
+                    'receiver_name' => $admin->name,
+                    'url'           => URL::to('/admin/booking-list'),
+                    'status'        => $status,
+                ]
+            ));
 
             $request->session()->flash('alert-success', 'Booking ruang '.$room->name.' berhasil ditambahkan');
             return redirect()->route('my-booking-list.index');
@@ -149,12 +172,39 @@ class MyBookingListController extends Controller
 
             $to_role    = 'USER';
 
-            dispatch(new SendEmail($user_email, $user_name, $room->name, $item->date, $item->start_time, $item->end_time, $item->purpose, $to_role, $user_name, 'https://google.com', $status));
-            
-            $to_role    = 'ADMIN';
+            dispatch(new SendEmail(
+                [$user_email],
+                'room',
+                [
+                    'user_name'     => $user_name,
+                    'room_name'     => $room->name,
+                    'date'          => $item->date,
+                    'start_time'    => $item->start_time,
+                    'end_time'      => $item->end_time,
+                    'purpose'       => $item->purpose,
+                    'to_role'       => 'USER',
+                    'receiver_name' => $user_name,
+                    'url'           => URL::to('/my-booking-list'),
+                    'status'        => $status,
+                ]
+            ));
 
-            dispatch(new SendEmail($admin->email, $user_name, $room->name, $item->date, $item->start_time, $item->end_time, $item->purpose, $to_role, $admin->name, 'https://google.com', $status));
-            
+            dispatch(new SendEmail(
+                [$admin->email],
+                'room',
+                [
+                    'user_name'     => $user_name,
+                    'room_name'     => $room->name,
+                    'date'          => $item->date,
+                    'start_time'    => $item->start_time,
+                    'end_time'      => $item->end_time,
+                    'purpose'       => $item->purpose,
+                    'to_role'       => 'ADMIN',
+                    'receiver_name' => $admin->name,
+                    'url'           => URL::to('/admin/booking-list'),
+                    'status'        => $status,
+                ]
+            ));
         } else {
             session()->flash('alert-failed', 'Booking Ruang '.$room->name.' gagal dibatalkan');
         }

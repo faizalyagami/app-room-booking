@@ -3,84 +3,57 @@
 namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-
 use Illuminate\Support\Facades\Mail;
 
 use App\Mail\BookingMail;
+use App\Mail\AlatTestBookingMail;
 
 class SendEmail implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $receiver_email;
-
-    public $user_name;
-    public $room_name;
-    public $date;
-    public $start_time;
-    public $end_time;
-    public $purpose;
-    public $to_role;
-    public $receiver_name;
-    public $url;
-    public $status;
+    protected array $receivers; // bisa 1 atau lebih email
+    protected string $type;     // 'room' | 'alat_test'
+    protected array $data;
 
     /**
-     * Create a new job instance.
-     *
-     * @return void
+     * @param string|array $receivers contoh: "mhs1@univ.ac.id" atau ["mhs1@univ.ac.id", "admin@univ.ac.id"]
+     * @param string $type
+     * @param array $data
      */
-    public function __construct(
-        $receiver_email, 
-        $user_name, 
-        $room_name, 
-        $date, 
-        $start_time, 
-        $end_time, 
-        $purpose, 
-        $to_role, 
-        $receiver_name, 
-        $url, 
-        $status
-    )
+    public function __construct(string|array $receivers, string $type, array $data)
     {
-        $this->receiver_email   = $receiver_email;
-        $this->user_name        = $user_name;
-        $this->room_name        = $room_name;
-        $this->date             = $date;
-        $this->start_time       = $start_time;
-        $this->end_time         = $end_time;
-        $this->purpose          = $purpose;
-        $this->to_role          = $to_role;
-        $this->receiver_name    = $receiver_name;
-        $this->url              = $url;
-        $this->status           = $status;
+        // pastikan selalu jadi array
+        $this->receivers = is_array($receivers) ? $receivers : [$receivers];
+        $this->type      = $type;
+        $this->data      = $data;
     }
 
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
-    public function handle()
+    public function handle(): void
     {
-        Mail::to($this->receiver_email)
-            ->send(new BookingMail(
-                $this->user_name, 
-                $this->room_name, 
-                $this->date, 
-                $this->start_time,
-                $this->end_time, 
-                $this->purpose, 
-                $this->to_role, 
-                $this->receiver_name, 
-                $this->url, 
-                $this->status
-            ));
+        foreach ($this->receivers as $receiver) {
+            \Log::info("Sending {$this->type} email to {$receiver}");
+
+            if ($this->type === 'room') {
+                Mail::to($receiver)->send(new BookingMail(
+                    $this->data['user_name'],
+                    $this->data['room_name'],
+                    $this->data['date'],
+                    $this->data['start_time'],
+                    $this->data['end_time'],
+                    $this->data['purpose'],
+                    $this->data['to_role'],
+                    $this->data['receiver_name'],
+                    $this->data['url'],
+                    $this->data['status']
+                ));
+            } elseif ($this->type === 'alat_test') {
+                Mail::to($receiver)->send(new AlatTestBookingMail($this->data));
+            }
+        }
     }
 }
