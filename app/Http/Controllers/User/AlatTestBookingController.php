@@ -8,16 +8,12 @@ use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Auth;
 
-use App\Models\BookingList;
-use App\Models\Room;
 use App\Models\User;
-
 use App\Jobs\SendEmail;
 
 use App\Models\AlatTestBooking;
 use App\Models\AlatTestItem;
 use App\Models\AlatTestItemBooking;
-use App\Models\DayTime;
 use Carbon\Carbon;
 use DataTables;
 
@@ -33,48 +29,30 @@ class AlatTestBookingController extends Controller
             ->make(true);
     }
 
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function index()
     {
         return view('pages.user.my-booking-alat-test-list.index');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function create()
     {
         $nowdate = Carbon::now();
         $hours = [
-            '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', 
-            '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', 
-            '20', '21', '22', '23' 
+            '00','01','02','03','04','05','06','07','08','09',
+            '10','11','12','13','14','15','16','17','18','19',
+            '20','21','22','23'
         ];
-        $minutes = [
-            '00', '30'
-        ];
+        $minutes = ['00','30'];
         $items = AlatTestItem::with(['alatTest'])->orderBy('serial_number')->get();
 
         return view('pages.user.my-booking-alat-test-list.create', [
-            'hours' => $hours, 
-            'minutes' => $minutes, 
-            'nowdate' => $nowdate, 
-            'items' => $items, 
+            'hours' => $hours,
+            'minutes' => $minutes,
+            'nowdate' => $nowdate,
+            'items' => $items,
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function store(MyBookingAlatTestListRequest $request)
     {
         $message = new AlatTestBooking();
@@ -89,36 +67,65 @@ class AlatTestBookingController extends Controller
         foreach($request->items as $item) {
             $messageItem = new AlatTestItemBooking();
             $messageItem->booking_alat_id = $message->id;
-            $messageItem->alat_test_item_id= $item;
+            $messageItem->alat_test_item_id = $item;
             $messageItem->save();
         }
+
+        // Ambil data user & admin
+        $userName  = auth()->user()->name;
+        $userEmail = auth()->user()->email;
+        $admin     = User::where('role', 'ADMIN')->first();
+        $adminEmail = $admin->email;
+        $adminName  = $admin->name;
+
+        // Ambil nama alat pertama
+        $alatName = $message->alatTestItemBooking->first()->alatTestItem->alatTest->nama_alat ?? 'Alat Test';
+
+        // Siapkan payload untuk job (alat_test)
+        $payloadForAdmin = [
+            'user_name'     => $userName,
+            'alat_name'     => $alatName,
+            'date'          => $message->date,
+            'start_time'    => $message->start_time,
+            'end_time'      => $message->end_time,
+            'purpose'       => $message->purpose,
+            'to_role'       => 'ADMIN',
+            'receiver_name' => $adminName,
+            'url'           => url('/admin/alat-test-booking-list/'.$message->id),
+            'status'        => $message->status,
+        ];
+
+        $payloadForUser = $payloadForAdmin;
+        $payloadForUser['to_role'] = 'USER';
+        $payloadForUser['receiver_name'] = $userName;
+        $payloadForUser['url'] = url('/my-booking-alat-test-list/'.$message->id);
+
+        // Dispatch job (alat_test)
+        dispatch(new SendEmail($adminEmail, 'alat_test', $payloadForAdmin));
+        dispatch(new SendEmail($userEmail, 'alat_test', $payloadForUser));
 
         $request->session()->flash('alert-success', 'Booking alat test berhasil ditambahkan');
         return redirect()->route('my-booking-alat-test-list.index');
     }
 
-    public function show($id) 
+    public function show($id)
     {
         $tool = AlatTestBooking::whereId($id)
             ->with(['alatTestItemBooking.alatTestItem.alatTest'])
             ->first();
 
-        return view('pages.user.my-booking-alat-test-list.show', compact(
-            'tool'
-        ));
+        return view('pages.user.my-booking-alat-test-list.show', compact('tool'));
     }
 
-    public function edit($id) 
+    public function edit($id)
     {
         $nowdate = Carbon::now();
         $hours = [
-            '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', 
-            '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', 
-            '20', '21', '22', '23' 
+            '00','01','02','03','04','05','06','07','08','09',
+            '10','11','12','13','14','15','16','17','18','19',
+            '20','21','22','23'
         ];
-        $minutes = [
-            '00', '30'
-        ];
+        $minutes = ['00','30'];
         $tool = AlatTestBooking::whereId($id)
             ->with(['alatTestItemBooking.alatTestItem.alatTest'])
             ->first();
@@ -149,7 +156,7 @@ class AlatTestBookingController extends Controller
                 $messageItem->save();
             }
 
-            $request->session()->flash('alert-failed', 'Booking alat test berhasil diupdate');
+            $request->session()->flash('alert-success', 'Booking alat test berhasil diupdate');
             return redirect()->route('my-booking-alat-test-list.show', [ $id ]);
         }
 
@@ -157,13 +164,6 @@ class AlatTestBookingController extends Controller
         return redirect()->route('my-booking-alat-test-list.show', [ $id ]);
     }
 
-    /**
-     * Cancel the specified data.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function cancel($id)
     {
         $tool = AlatTestBooking::whereId($id)->first();
@@ -171,6 +171,8 @@ class AlatTestBookingController extends Controller
         if($tool !== null) {
             $tool->status = 'BATAL';
             $tool->save();
+
+            // optional: notify user/admin about cancellation via SendEmail if desired
 
             session()->flash('alert-success', 'Booking Alat Test berhasil dibatalkan');
             return redirect()->route('my-booking-alat-test-list.index');

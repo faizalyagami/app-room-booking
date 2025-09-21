@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
@@ -24,51 +23,72 @@ class BookingMail extends Mailable
 
     /**
      * Create a new message instance.
-     *
-     * @return void
      */
-    public function __construct($user_name, $room_name, $date, $start_time, $end_time, $purpose, $to_role, $receiver_name, $url, $status)
-    {
-        $this->user_name        = $user_name;
-        $this->room_name        = $room_name;
-        $this->date             = $date;
-        $this->start_time       = $start_time;
-        $this->end_time         = $end_time;
-        $this->purpose          = $purpose;
-        $this->to_role          = $to_role;
-        $this->receiver_name    = $receiver_name;
-        $this->url              = $url;
-        $this->status           = $status;
+    public function __construct(
+        $user_name,
+        $room_name,
+        $date,
+        $start_time,
+        $end_time,
+        $purpose,
+        $to_role,
+        $receiver_name,
+        $url,
+        $status
+    ) {
+        $this->user_name      = $user_name;
+        $this->room_name      = $room_name;
+        $this->date           = $date;
+        $this->start_time     = $start_time;
+        $this->end_time       = $end_time;
+        $this->purpose        = $purpose;
+        $this->to_role        = $to_role;
+        $this->receiver_name  = $receiver_name;
+        $this->url            = $url;
+        $this->status         = $status;
     }
 
     /**
      * Build the message.
-     *
-     * @return $this
      */
     public function build()
     {
-        if($this->to_role == 'ADMIN') {
-            if($this->status == 'DIBUAT') {
-                return $this->subject('Request booking baru')->view('emails.booking');
-            } elseif($this->status == 'BATAL') {
-                return $this->subject('Request booking dibatalkan')->view('emails.booking');
-            } elseif($this->status == 'DISETUJUI') {
-                return $this->subject('Request booking berhasil disetujui')->view('emails.booking');
-            } elseif($this->status == 'DITOLAK') {
-                return $this->subject('Request booking berhasil ditolak')->view('emails.booking');
-            } 
-        } elseif($this->to_role == 'USER'){
-            if($this->status == 'DIBUAT') {
-                return $this->subject('Request booking berhasil dibuat')->view('emails.booking');
-            } elseif($this->status == 'BATAL') {
-                return $this->subject('Request booking berhasil dibatalkan')->view('emails.booking');
-            } elseif($this->status == 'DISETUJUI') {
-                return $this->subject('Selamat! Request booking kamu sudah disetujui')->view('emails.booking');
-            } elseif($this->status == 'DITOLAK') {
-                return $this->subject('Maaf, request booking kamu ditolak')->view('emails.booking');
+        $subject = 'Notifikasi Booking';
+
+        if ($this->to_role === 'ADMIN') {
+            if ($this->status === 'DIBUAT') {
+                $subject = 'Request booking baru';
+            } elseif ($this->status === 'BATAL') {
+                $subject = 'Request booking dibatalkan';
+            } elseif ($this->status === 'DISETUJUI') {
+                $subject = 'Request booking berhasil disetujui';
+            } elseif ($this->status === 'DITOLAK') {
+                $subject = 'Request booking berhasil ditolak';
             }
-        } 
-        return -1;
+        } elseif ($this->to_role === 'USER') {
+            if ($this->status === 'DIBUAT') {
+                $subject = 'Request booking berhasil dibuat';
+            } elseif ($this->status === 'BATAL') {
+                $subject = 'Request booking berhasil dibatalkan';
+            } elseif ($this->status === 'DISETUJUI') {
+                $subject = 'Selamat! Request booking kamu sudah disetujui';
+            } elseif ($this->status === 'DITOLAK') {
+                $subject = 'Maaf, request booking kamu ditolak';
+            }
+        }
+
+        return $this->subject($subject)
+            ->view('emails.booking')
+            ->with([
+                'receiver_name' => $this->receiver_name,
+                'user_name'     => $this->user_name,
+                'room_name'     => $this->room_name,
+                'date'          => $this->date,
+                'start_time'    => $this->start_time,
+                'end_time'      => $this->end_time,
+                'purpose'       => $this->purpose,
+                'status'        => $this->status,
+                'url'           => $this->url,
+            ]);
     }
 }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Notifikasi Booking Ruangan</title>
+    <title>Notifikasi Peminjaman Alat</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height:1.6; font-size:14px; color:#333;">
 
@@ -12,24 +12,24 @@
 
     @if ($to_role == 'ADMIN')
         @if ($status == 'DIBUAT')
-            <p>Ada <strong>request booking baru</strong> dengan data berikut:</p>
+            <p>Ada <strong>request peminjaman alat baru</strong> dengan data berikut:</p>
         @elseif ($status == 'BATAL')
-            <p>Request booking berikut ini sekarang <strong>dibatalkan</strong>:</p>
+            <p>Request peminjaman berikut ini sekarang <strong>dibatalkan</strong>:</p>
         @elseif ($status == 'DISETUJUI')
-            <p>Request booking berikut ini sekarang <strong>disetujui</strong>:</p>
+            <p>Request peminjaman berikut ini sekarang <strong>disetujui</strong>:</p>
         @elseif ($status == 'DITOLAK')
-            <p>Request booking berikut ini sekarang <strong>ditolak</strong>:</p>
+            <p>Request peminjaman berikut ini sekarang <strong>ditolak</strong>:</p>
         @endif
 
     @elseif ($to_role == 'USER')
         @if ($status == 'DIBUAT')
-            <p>Request kamu <strong>berhasil dibuat</strong>! Berikut ini datanya:</p>
+            <p>Request peminjaman kamu <strong>berhasil dibuat</strong>! Berikut ini datanya:</p>
         @elseif ($status == 'BATAL')
-            <p>Request kamu sekarang <strong>dibatalkan</strong>! Berikut ini datanya:</p>
+            <p>Request peminjaman kamu sekarang <strong>dibatalkan</strong>! Berikut ini datanya:</p>
         @elseif ($status == 'DISETUJUI')
-            <p>Selamat! Request kamu sudah <strong>disetujui</strong>! Berikut ini datanya:</p>
+            <p>Selamat! Request peminjaman kamu sudah <strong>disetujui</strong>! Berikut ini datanya:</p>
         @elseif ($status == 'DITOLAK')
-            <p>Maaf, request kamu <strong>ditolak</strong>! Berikut ini datanya:</p>
+            <p>Maaf, request peminjaman kamu <strong>ditolak</strong>! Berikut ini datanya:</p>
         @endif
     @endif
 
@@ -49,8 +49,8 @@
             <td>{{ $user_name }}</td>
         </tr>
         <tr>
-            <td><strong>Nama Ruangan</strong></td>
-            <td>{{ $room_name }}</td>
+            <td><strong>Nama Alat</strong></td>
+            <td>{{ $tool_name }}</td>
         </tr>
         <tr>
             <td><strong>Tanggal</strong></td>
@@ -76,14 +76,14 @@
 
     <p style="margin-top: 15px;">
         <a href="{{ $url }}" 
-           style="display:inline-block;background:#3498db;color:#fff;
+           style="display:inline-block;background:#27ae60;color:#fff;
                   padding:10px 15px;border-radius:5px;text-decoration:none;">
-            Lihat Detail Booking
+            Lihat Detail Peminjaman
         </a>
     </p>
 
     <p style="font-size: 12px; color: #777; margin-top: 30px;">
-        Email ini dikirim otomatis oleh sistem Room Booking.<br>
+        Email ini dikirim otomatis oleh sistem Peminjaman Alat.<br>
         Mohon tidak membalas email ini.
     </p>
 
