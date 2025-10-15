@@ -24,7 +24,7 @@
       <div class="row">
         <div class="col-md-4">
           @if ($item->photo)
-            <img src="{{ asset('storage/' . $item->photo) }}" class="img-fluid rounded" alt="Foto Alat Test">
+            <img src="{{ asset('storage/' . $item->alatTest->photo) }}" class="img-fluid rounded" alt="Foto Alat Test">
           @else
             <p>Tidak ada foto tersedia.</p>
           @endif
@@ -33,44 +33,56 @@
           <table class="table table-striped">
             <tr>
                 <th>Nama Alat</th>
-                <td>{{ $item->name }}</td>
+                <td>{{ $item->alatTest->name }}</td>
+            </tr>
+            <tr>
+                <th>Serial Number</th>
+                <td>{{ $item->serial_number }}</td>
             </tr>
             <tr>
                 <th>Deskripsi</th>
-                <td>{{ $item->description }}</td>
+                <td>{{ $item->alatTest->description }}</td>
             </tr>
             <tr>
                 <th>Total Unit</th>
-                <td>{{ $item->stock }}</td>
+                <td>{{ $item->quantity }}</td>
             </tr>
-          </table>
-          
-          <br />
-
-          <table class="table table-sm" style="margin-left: 21px;">
-            <tr>
-                <th>No.</th>
-                <th>Serial Number</th>
-                <th>Booking</th>
-            </tr>
-            @forelse ($item->items as $key => $unit)
-              <tr>
-                <td>{{ $key + 1 }}</td>
-                <td>{{ $unit->serial_number }}</td>
-                <td><a href="{{ route('alat-test-booking-list.index') }}">{{ $unit->bookings }}</a></td>
-                {{-- <td>
-                  <span class="badge badge-{{ $unit->status == 'tersedia' ? 'success' : 'warning' }}">
-                    {{ ucfirst($unit->status) }}
-                  </span>
-                </td> --}}
-              </tr>
-            @empty
-              <tr>
-                <td colspan="3">Tidak ada unit.</td>
-              </tr>
-            @endforelse
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h4>Logs</h4>
+    </div>
+    <div class="card-body">
+        <table class="table table-striped">
+          <tr>
+              <th>No.</th>
+              <th>Tanggal</th>
+              <th>Tipe</th>
+              <th>Jumlah</th>
+          </tr>
+
+          @if(count($logs) > 0)
+            @foreach ($logs as $key => $log)
+              <tr>
+                <td>{{ $key + 1 }}</td>
+                <td>{{ date("d M Y", strtotime($log->date)) }}</td>
+                <td>
+                  @if($log->type == 'Masuk')
+                    <span style="color: green;">{{ $log->type }}</span>
+                  @else
+                    <span style="color: red;">{{ $log->type }}</span>
+                  @endif
+                </td>
+                <td>{{ $log->quantity }}</td>
+              </tr>
+            @endforeach
+          @endif
+        </table>
       </div>
     </div>
   </div>

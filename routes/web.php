@@ -13,8 +13,11 @@ use App\Http\Controllers\Admin\BookingListController;
 
 use App\Http\Controllers\Admin\AlatTestController as AdminAlatTestController;
 use App\Http\Controllers\Admin\AlatTestBookingListController;
-
+use App\Http\Controllers\Admin\AlatTestInoutController;
+use App\Http\Controllers\Admin\GroupAlatTestController;
 use App\Http\Controllers\ChangePassController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\AlatTestListController;
 use App\Http\Controllers\User\AlatTestBookingController;
 use Illuminate\Support\Facades\Auth;
@@ -58,6 +61,10 @@ Route::group(['namespace' => 'App\Http\Controllers'] , function() {
     
 });
 
+Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+Route::patch('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+
 Route::prefix('/')
     ->middleware(['auth', 'is.user'])
     ->group(function () {
@@ -84,7 +91,7 @@ Route::prefix('/')
         Route::get('/alat-test-list/json', [AlatTestListController::class, 'json'])
             ->name('alat-test-list.json');
         Route::get('/alat-test-list/get-tools', [AlatTestListController::class, 'getTools'])
-            ->name('alat-test-list.-get-tools');
+            ->name('alat-test-list.get-tools');
         Route::get('/alat-test-list', [AlatTestListController::class, 'index'])
             ->name('alat-test-list.index');
         // Route::get('/mail', function () {
@@ -157,6 +164,35 @@ Route::prefix('admin')
             ->name('alat-test-booking-list.update');
 
         Route::get('/alat-test/json', [AdminAlatTestController::class, 'json'])->name('alat-test.json');
+        
+        Route::prefix('alat-test')->as('alat-test.')->group(function () {
+            Route::get('{id}/logs', [AdminAlatTestController::class, 'logs'])->name('logs');
+
+            Route::prefix('group')->as('group.')->group(function () {
+                Route::get('list', [GroupAlatTestController::class, 'list'])->name('list');
+                Route::get('/', [GroupAlatTestController::class, 'index'])->name('index');
+                Route::get('create', [GroupAlatTestController::class, 'create'])->name('create');
+                Route::post('create', [GroupAlatTestController::class, 'store'])->name('store');
+                Route::get('{id}/show', [GroupAlatTestController::class, 'show'])->name('show');
+                Route::get('{id}/edit', [GroupAlatTestController::class, 'edit'])->name('edit');
+                Route::patch('{id}/update', [GroupAlatTestController::class, 'update'])->name('update');
+                Route::delete('{id}/delete', [GroupAlatTestController::class, 'destroy'])->name('destroy');
+            });
+
+            Route::prefix('inout')->as('inout.')->group(function () {
+                Route::get('json', [AlatTestInoutController::class, 'json'])->name('json');
+                Route::get('get-tools', [AlatTestInoutController::class, 'getTools'])->name('get-tools');
+                Route::get('list', [AlatTestInoutController::class, 'list'])->name('list');
+                Route::get('/', [AlatTestInoutController::class, 'index'])->name('index');
+                Route::get('create', [AlatTestInoutController::class, 'create'])->name('create');
+                Route::post('create', [AlatTestInoutController::class, 'store'])->name('store');
+                Route::get('{id}/show', [AlatTestInoutController::class, 'show'])->name('show');
+                Route::get('{id}/edit', [AlatTestInoutController::class, 'edit'])->name('edit');
+                Route::patch('{id}/update', [AlatTestInoutController::class, 'update'])->name('update');
+                Route::delete('{id}/delete', [AlatTestInoutController::class, 'destroy'])->name('destroy');
+            });
+        });
+        
         Route::resource('alat-test', AdminAlatTestController::class)->names('alat-test');
 
         Route::resources([
