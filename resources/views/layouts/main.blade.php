@@ -52,6 +52,8 @@
       </div>
     </div>
   </div>
+  @stack('modal-box')
+
 </body>
 
 @stack('before-script')
