@@ -58,6 +58,11 @@
             <i class="fas fa-door-open"></i> <span>Ruangan</span>
           </a>
         </li>
+        <li class="{{ request()->is('admin/alat-test/group*') ? 'active' : '' }}">
+          <a class="nav-link" href="{{ route('alat-test.group.index') }}">
+            <i class="fas fa-toolbox"></i><span>Group Alat Test</span>
+          </a>
+        </li>
         <li class="{{ request()->is('admin/alat-test*') ? 'active' : '' }}">
           <a class="nav-link" href="{{ route('alat-test.index') }}">
             <i class="fas fa-toolbox"></i><span>Alat Test Psikologi</span>
@@ -80,6 +85,11 @@
           <a class="nav-link" href="{{ route('alat-test-booking-list.index') }}">
             @inject('tool_booking_list', 'App\Models\AlatTestBooking')
             <i class="fas fa-list"></i> <span>{{ $tool_booking_list->where("status", "!=", "tersedia")->count() > 0 ? '('.$tool_booking_list->where("status", "!=", "tersedia")->count().')' : '' }} Alat test Booking List</span>
+          </a>
+        </li>
+        <li class="{{ request()->is('admin/alat-test/inout*') ? 'active' : '' }}">
+          <a class="nav-link" href="{{ route('alat-test.inout.index') }}">
+            <i class="fas fa-retweet"></i> <span>Keluar Masuk Alat Test</span>
           </a>
         </li>
 

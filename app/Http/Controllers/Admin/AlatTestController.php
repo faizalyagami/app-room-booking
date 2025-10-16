@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AlatTestRequest;
 use App\Models\AlatTest;
+use App\Models\AlatTestInoutItem;
 use App\Models\AlatTestItem;
 use Carbon\Carbon;
-use Hamcrest\Type\IsNumeric;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,21 +16,26 @@ class AlatTestController extends Controller
 {
     public function json()
     {
-        $data = AlatTest::withCount([
-            'items'
-        ])->get();
+        $data = AlatTestItem::with([
+                'alatTest'
+            ])
+            ->whereHas('alatTest', function($at) {
+                $at->whereNull('deleted_at');
+            })
+            ->get();
 
         $result = [];
 
         foreach ($data as $index => $item) {
             $result[] = [
-                'DT_RowIndex' => $index + 1,
-                'photo'=> $item->photo,
-                'name' => $item->name,
-                'description' => $item->description,
-                'items_count' => $item->items_count,
-                'avaliable_stock' => $item->avaliable_stock,
+                'index' => $index + 1,
                 'id' => $item->id,
+                'alat_test_id'=> $item->alat_test_id,
+                'name'=> $item->alatTest->name,
+                'serial_number' => $item->serial_number,
+                'type' => $item->type,
+                'quantity' => $item->quantity,
+                'status' => $item->status
             ];
         }
 
@@ -45,43 +50,29 @@ class AlatTestController extends Controller
 
     public function create()
     {
-        return view('pages.admin.alat-test.edit_or_create');
+        $groups = AlatTest::orderBy('name')->pluck('name', 'id');
+        $types = [1 => 'Satuan', 'Lembar'];
+
+        return view('pages.admin.alat-test.create', compact(
+            'groups', 'types'
+        ));
     }
 
-    public function store(AlatTestRequest $request)
+    public function store(Request $request)
     {
-        $data = $request->only(['name', 'description']);
+        $this->validate($request, [
+            'alat_test_id' => ['required'], 
+            'serial_number' => ['required', 'unique:alat_test_items,serial_number'], 
+            'type' => ['required', 'integer'],
+            'quantity' => ['required_if:type,2'],
+        ]);
 
-        // Cek jika ada file foto
-        if ($request->hasFile('photo')) {
-            $data['photo'] = $request->file('photo')->store('assets/image/alat-test', 'public');
-        }
-
-        // Cegah duplikasi alat test berdasarkan name
-        $alatTest = AlatTest::firstOrCreate(
-            ['name' => $data['name']],
-            $data
-        );
-
-        // Cek apakah alat test baru dibuat atau sudah ada
-        if ($alatTest->wasRecentlyCreated) {
-            // Jika baru dibuat, buat serial number sesuai stok
-            if (is_numeric($request->stock) && $request->stock > 0) {
-                $tahun = now()->year;
-                $nama = strtoupper(str_replace(' ', '-', $alatTest->name));
-
-                for ($i = 1; $i <= $request->stock; $i++) {
-                    $nomorUrut = str_pad($i, 3, '0', STR_PAD_LEFT);
-                    $serialNumber = "LabPsi/{$nama}/{$nomorUrut}/{$tahun}";
-
-                    AlatTestItem::create([
-                        'alat_test_id' => $alatTest->id,
-                        'serial_number' => $serialNumber,
-                        'status' => 'tersedia'
-                    ]);
-                }
-            }
-        }
+        $message = new AlatTestItem();
+        $message->alat_test_id = $request->alat_test_id;
+        $message->serial_number = $request->serial_number;
+        $message->type = $request->type;
+        $message->quantity = $request->quantity;
+        $message->save();
 
         return redirect()->route('alat-test.index')->with('success', 'Alat test berhasil ditambahkan');
     }
@@ -89,76 +80,78 @@ class AlatTestController extends Controller
 
     public function edit($id)
     {
-        $item = AlatTest::with('items')->findOrFail($id);
-        $serialNumbers = $item->items->pluck('serial_number')->implode(PHP_EOL);
-        return view('pages.admin.alat-test.edit_or_create', compact('item', 'serialNumbers'));
+        $item = AlatTestItem::whereId($id)->first();
+        $groups = AlatTest::orderBy('name')->pluck('name', 'id');
+        $types = [1 => 'Satuan', 'Lembar'];
+
+        return view('pages.admin.alat-test.edit', compact(
+            'groups', 'types', 'item'
+        ));
     }
 
-    public function update(AlatTestRequest $request, $id)
+    public function update(Request $request, $id)
     {
-        $alatTest = AlatTest::with('items')->findOrFail($id);
-        $data = $request->only(['name', 'description']);
+        $this->validate($request, [
+            'alat_test_id' => ['required'], 
+            'serial_number' => ['required', 'unique:alat_test_items,serial_number,'. $id], 
+            'type' => ['required', 'integer'],
+            'quantity' => ['required_if:type,2'],
+        ]);
 
-        if ($request->hasFile('photo')) {
-            $data['photo'] = $request->file('photo')->store('assets/image/alat-test', 'public');
-        }
-
-        $alatTest->update($data);
-
-        // Hitung jumlah stok saat ini
-        $stokSaatIni = $alatTest->items()->count();
-
-        // Jika jumlah stock baru > stok saat ini, tambahkan item baru
-        if (is_numeric($request->stock) && $request->stock > $stokSaatIni) {
-            $tahun = now()->year;
-            $nama = strtoupper(str_replace(' ', '-', $alatTest->name));
-            $jumlahTambahan = $request->stock - $stokSaatIni;
-
-            for ($i = 1; $i <= $jumlahTambahan; $i++) {
-                $nomorUrut = str_pad($stokSaatIni + $i, 3, '0', STR_PAD_LEFT);
-                $serialNumber = "LabPsi/{$nama}/{$nomorUrut}/{$tahun}";
-
-                AlatTestItem::create([
-                    'alat_test_id' => $alatTest->id,
-                    'serial_number' => $serialNumber,
-                    'status' => 'tersedia'
-                ]);
-            }
-        }
+        $message = AlatTestItem::whereId($id)->first();
+        $message->alat_test_id = $request->alat_test_id;
+        $message->serial_number = $request->serial_number;
+        $message->type = $request->type;
+        $message->quantity = $request->type == 1 ? 1 : $request->quantity;
+        $message->save();
 
         return redirect()->route('alat-test.index')->with('success', 'Alat test berhasil diperbaharui');
     }
 
     public function show($id)
     {
-        $item = AlatTest::with([
-                'items' => function($i) {
-                    $i->withCount(['alatTestItemBookings as bookings' => function($b) {
-                        $b->whereHas('alatTestBooking', function($c) {
-                            $c->where('date', '>', Carbon::now());
-                        });
-                    }]);
-                }
+        $item = AlatTestItem::with([
+                'alatTest' 
             ])
             ->findOrFail($id);
-        return view('pages.admin.alat-test.show', compact('item'));
+
+        $logs = AlatTestInoutItem::where('alat_test_item_id', $id)
+            ->select('alat_test_in_outs.id', 'alat_test_in_outs.date', 'alat_test_in_outs.type', 'alat_test_in_out_items.quantity')
+            ->join('alat_test_in_outs', 'alat_test_in_outs.id', 'alat_test_in_out_id')
+            ->orderBy('date', 'desc')
+            ->limit(11)
+            ->get();
+
+        return view('pages.admin.alat-test.show', compact(
+            'item', 'logs'
+        ));
     }
 
     public function destroy($id)
     {
-        $alatTest = AlatTest::findOrFail($id);
-
-        // Hapus semua item terkait jika diperlukan
-        $alatTest->items()->delete(); // jika relasi items()
-
-        // Hapus file foto dari storage (opsional)
-        if ($alatTest->photo && Storage::disk('public')->exists($alatTest->photo)) {
-            Storage::disk('public')->delete($alatTest->photo);
-        }
+        $item = AlatTestItem::findOrFail($id);
 
         // Hapus alat test
-        $alatTest->delete();
+        $item->delete();
 
         return redirect()->route('alat-test.index')->with('success', 'Data alat test berhasil dihapus.');
+    }
+
+    public function logs($id)
+    {
+        $item = AlatTestItem::with([
+                'alatTest' 
+            ])
+            ->findOrFail($id);
+            
+        $logs = AlatTestInoutItem::where('alat_test_item_id', $id)
+            ->select('alat_test_in_outs.id', 'alat_test_in_outs.date', 'alat_test_in_outs.type', 'alat_test_in_out_items.quantity')
+            ->join('alat_test_in_outs', 'alat_test_in_outs.id', 'alat_test_in_out_id')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return view('pages.admin.alat-test.logs', compact(
+            'item', 'logs'
+        ));
     }
 }
