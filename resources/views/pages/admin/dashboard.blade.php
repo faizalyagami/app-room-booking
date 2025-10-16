@@ -120,7 +120,7 @@
     @component('components.statistic-card')
       @slot('bg_color', 'bg-primary')
       @slot('icon', 'fas fa-user')
-      @slot('title', 'Total User')
+      @slot('title', 'Jumlah Mahasiswa')
       @slot('value', $user)
     @endcomponent
   </div>
@@ -138,7 +138,7 @@
     @component('components.statistic-card')
       @slot('bg_color', 'bg-info')
       @slot('icon', 'fas fa-user')
-      @slot('title', 'Total Alat Test')
+      @slot('title', 'Jumlah Mahasiswa')
       @slot('value', $user)
     @endcomponent
   </div>

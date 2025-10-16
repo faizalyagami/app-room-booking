@@ -122,6 +122,10 @@ Route::prefix('admin')
     ->group(function () {
         Route::get('/', [AdminDashboardController::class, 'index'])
             ->name('admin.dashboard');
+        
+        Route::get('user/download-template', [UserController::class, 'downloadTemplate'])->name('user.downloadTemplate');
+        Route::get('user/import', [UserController::class, 'showImportForm'])->name('user.import');
+        Route::post('user/import', [UserController::class, 'importExcel'])->name('user.importExcel');
 
         Route::get('/user/json', [UserController::class, 'json'])
             ->name('user.json');

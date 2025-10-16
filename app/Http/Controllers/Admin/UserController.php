@@ -6,19 +6,22 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
 use App\Models\User;
-
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Http\Requests\Admin\UserAddRequest;
 use App\Http\Requests\Admin\UserEditRequest;
 use App\Http\Requests\Admin\UserChangePassRequest;
-
+use App\Imports\UsersImport;
 use DataTables;
-
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
     public function json()
     {
-        $data = User::select(['id', 'email', 'username', 'npm', 'name']);
+        $data = User::select(['id', 'email', 'username', 'npm', 'name'])->orderBy('npm','asc');
 
         return datatables()->of($data)
             ->addIndexColumn()
@@ -154,5 +157,53 @@ class UserController extends Controller
         }
 
         return redirect()->route('user.index');
+    }
+
+    public function downloadTemplate(): StreamedResponse
+    {
+        $headers = [
+            'Content-Type'=> 'text/csv',
+            'Content-Disposition' => 'attachment; filename="template_user.csv"'
+        ];
+
+        $callback = function() {
+            $file = fopen('php://output', 'w');
+            //header kolom
+            fputcsv($file, ['email', 'username', 'npm', 'name']);
+            //contoh baris data
+            fputcsv($file, ['user@example.com', 'user1', '10050021234', 'Mahasiswa 1']);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function showImportForm()
+    {
+        return view('user.index');
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,csv,xls',
+        ]);
+
+        set_time_limit(300);
+
+        
+        try {
+            $file = $request->file('file');
+            Log::info('Import file original name: ' . $file->getClientOriginalName());
+
+            Excel::import(new UsersImport, $file);
+
+            Log::info('Import finished successfully');
+            return redirect()->route('user.index')->with('alert-success', 'Data user berhasil diimport!');
+        } catch (\Exception $th) {
+            Log::error('Import failed: ' . $th->getMessage());
+            return redirect()->route('user.index')->with('error', 'Terjadi kesalahan import: ' . $th->getMessage());
+        }
+
     }
 }
