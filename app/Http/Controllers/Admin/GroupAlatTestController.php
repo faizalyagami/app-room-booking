@@ -15,12 +15,14 @@ class GroupAlatTestController extends Controller
 {
     public function list()
     {
-        $data = AlatTest::withCount([
-            'items'
-        ])->get();
+        $data = AlatTest::withSum([
+            'items' => function ($query) {
+                $query->where('status', 'tersedia');
+            }
+        ], 'quantity')->get();
 
         $result = [];
-
+        // dd($data);
         foreach ($data as $index => $item) {
             $result[] = [
                 'index' => $index + 1,
@@ -28,7 +30,7 @@ class GroupAlatTestController extends Controller
                 'photo'=> $item->photo,
                 'name' => $item->name,
                 'description' => $item->description,
-                'items_count' => $item->items_count
+                'items_sum' => $item->items_sum_quantity
             ];
         }
 
