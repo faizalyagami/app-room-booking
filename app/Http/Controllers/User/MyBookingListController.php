@@ -90,7 +90,17 @@ class MyBookingListController extends Controller
         if($save == 0 ) {
             $request->session()->flash('alert-failed', 'Ruangan '.$room->name.' di waktu itu sudah dibooking');
             return redirect()->route('my-booking-list.create');
-        } else {
+        } 
+
+        $bookingDateTimeStart = Carbon::parse($request->date . ' ' . $time[0]);
+        $bookingDateTimeEnd = Carbon::parse($request->date . ' ' . $time[1]);
+        $now = Carbon::now();
+
+        if ($bookingDateTimeEnd->lessThanOrEqualTo($now)) {
+            $request->session()->flash('alert-failed', 'Tanggal dan waktu yang dipilih sudah terlewat. Silahkan pilih waktu yang masih tersedia.');
+            return redirect()->route('my-booking-list.create');
+        }
+
             $message = new BookingList();
             $message->room_id = $request->room_id;
             $message->user_id = auth()->user()->id;
@@ -107,22 +117,22 @@ class MyBookingListController extends Controller
             $status = 'DIBUAT';
 
             // Email ke USER
-dispatch(new SendEmail(
-    [$user->email], 
-    'room', // type
-    [
-        'user_name'     => $user->name,
-        'room_name'     => $room->name,
-        'date'          => $request->date,
-        'start_time'    => $time[0],
-        'end_time'      => $time[1],
-        'purpose'       => $request->purpose,
-        'to_role'       => 'USER',
-        'receiver_name' => $user->name,
-        'url'           => URL::to('/my-booking-list'),
-        'status'        => $status,
-    ]
-));
+            dispatch(new SendEmail(
+                [$user->email], 
+                'room', // type
+                [
+                    'user_name'     => $user->name,
+                    'room_name'     => $room->name,
+                    'date'          => $request->date,
+                    'start_time'    => $time[0],
+                    'end_time'      => $time[1],
+                    'purpose'       => $request->purpose,
+                    'to_role'       => 'USER',
+                    'receiver_name' => $user->name,
+                    'url'           => URL::to('/my-booking-list'),
+                    'status'        => $status,
+                ]
+            ));
 
             // Email ke ADMIN
             dispatch(new SendEmail(
@@ -144,7 +154,7 @@ dispatch(new SendEmail(
 
             $request->session()->flash('alert-success', 'Booking ruang '.$room->name.' berhasil ditambahkan');
             return redirect()->route('my-booking-list.index');
-        }
+        
     }
 
     /**
