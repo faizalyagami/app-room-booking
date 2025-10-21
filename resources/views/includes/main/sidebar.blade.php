@@ -1,7 +1,10 @@
 <div class="main-sidebar">
   <aside id="sidebar-wrapper">
-    <div class="sidebar-brand">
-      <a href="index.html">ROOMING</a>
+    <div class="sidebar-brand" style="padding-left: 15px">
+      <a href="#" style="display: flex; align-items: center;">
+        <img src="{{ asset('theme/img/logo_fakultas_psi.png') }}" width="40" alt="Logo" style="margin-right: 10px;">
+        <span>SIMBOOK</span>
+      </a>
     </div>
     <div class="sidebar-brand sidebar-brand-sm">
       <a href="index.html">RM</a>

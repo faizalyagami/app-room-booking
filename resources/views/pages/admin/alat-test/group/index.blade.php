@@ -31,6 +31,7 @@
 				<th>#</th>
 				<th>Foto</th>
 				<th>Nama</th>
+				<th>Stok</th>
 				<th>Keterangan</th>
 				<th>Aksi</th>
 			</tr>
@@ -76,6 +77,10 @@
 				{
 					name: 'name',
 					data: 'name',
+				},
+				{
+					name: 'items_sum',
+					data: 'items_sum',
 				},
 				{
 					name: 'description',

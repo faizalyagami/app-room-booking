@@ -71,7 +71,7 @@ class AlatTestController extends Controller
         $message->alat_test_id = $request->alat_test_id;
         $message->serial_number = $request->serial_number;
         $message->type = $request->type;
-        $message->quantity = $request->quantity;
+        $message->quantity = $request->quantity ?? 1;
         $message->save();
 
         return redirect()->route('alat-test.index')->with('success', 'Alat test berhasil ditambahkan');

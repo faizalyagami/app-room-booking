@@ -11,7 +11,7 @@
           <div class="card card-primary">
             <div class="card-body">
               <div class="logo" align="center">
-                <img src="{{ asset('theme/img/logo-unisba.png') }}" width="120">
+                <img src="{{ asset('theme/img/logo_fakultas_psi.png') }}" width="120">
               </div>
               <div class="login-brand">
                 SISTEM INFORMASI MANAJEMEN BOOKING RUANGAN & PEMINJAMAN ALAT TEST LABORATORIUM PSIKOLOGI
