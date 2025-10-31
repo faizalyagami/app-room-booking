@@ -11,8 +11,25 @@ use DataTables;
 use Carbon\Carbon; 
 
 class BookingListController extends Controller { 
-    public function json() { $data = BookingList::with(['room', 'user'])->get(); 
-        $result = $data->map(function ($item, $index) { return [ 'index' => $index + 1, 'id' => $item->id, 'photo' => $item->room->photo ?? '-', 'room' => $item->room->name ?? '-', 'user' => $item->user->name ?? '-', 'date' => $item->date, 'start_time' => $item->start_time, 'end_time' => $item->end_time, 'purpose' => $item->purpose, 'status' => $item->status, ]; }); return response()->json([ 'data' => $result ]); 
+    public function json() { $data = BookingList::with(['room', 'user'])
+        ->orderBy('date', 'desc')
+        ->orderBy('start_time', 'desc')
+        ->get(); 
+        $result = $data->map(function ($item, $index) { 
+            return [
+                 'index' => $index + 1, 
+                 'id' => $item->id, 
+                 'photo' => $item->room->photo ?? '-', 
+                 'room' => $item->room->name ?? '-', 
+                 'user' => $item->user->name ?? '-', 
+                 'date' => $item->date, 
+                 'start_time' => $item->start_time, 
+                 'end_time' => $item->end_time, 
+                 'purpose' => $item->purpose, 
+                 'status' => $item->status,
+                ]; 
+            }); 
+                return response()->json([ 'data' => $result ]); 
     } /** * Display a listing of the resource. * * @return \Illuminate\Http\Response */ 
     public function index() { return view('pages.admin.booking-list.index'); 
     } 

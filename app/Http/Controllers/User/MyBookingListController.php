@@ -192,7 +192,7 @@ class MyBookingListController extends Controller
                     'start_time'    => $item->start_time,
                     'end_time'      => $item->end_time,
                     'purpose'       => $item->purpose,
-                    'to_role'       => 'USER',
+                    'to_role'       => $to_role,
                     'receiver_name' => $user_name,
                     'url'           => URL::to('/my-booking-list'),
                     'status'        => $status,

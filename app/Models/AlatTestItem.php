@@ -9,7 +9,7 @@ class AlatTestItem extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['alat_test_id', 'serial_number', 'status'];
+    protected $fillable = ['alat_test_id', 'serial_number', 'type', 'quantity', 'status'];
 
     protected $casts = ['serial_number' => 'string', 'status' => 'string'];
 

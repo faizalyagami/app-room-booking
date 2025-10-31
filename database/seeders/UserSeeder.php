@@ -23,6 +23,14 @@ class UserSeeder extends Seeder
             'npm'       => null,
         ]);
 
+        User::create([
+            'name'      => 'petugas',
+            'username'  => 'petugas',
+            'password'  => bcrypt('petugas'),
+            'role'      => 'ADMIN',
+            'email'     => 'petugas@petugas.com',
+            'npm'       => null,
+        ]);
 
         // User::create([
         //     'name'      => 'Mahasiswa 1',
