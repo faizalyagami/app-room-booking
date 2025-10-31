@@ -114,56 +114,56 @@ class RoomSeeder extends Seeder
 
         Room::create([
             'id'            => 15,
-            'name'          => 'Seminar 15 Lantai 4',
+            'name'          => 'Lab Psikologi 15 Lantai 4',
             'description'   => 'Ruang Laboratorium',
             'capacity'      => 8,
         ]);
 
         Room::create([
             'id'            => 16,
-            'name'          => 'Seminar 16 Lantai 4',
+            'name'          => 'Lab Psikologi 16 Lantai 4',
             'description'   => 'Ruang Laboratorium',
             'capacity'      => 8,
         ]);
 
         Room::create([
             'id'            => 17,
-            'name'          => 'Seminar 17 Lantai 4',
+            'name'          => 'Lab Psikologi 17 Lantai 4',
             'description'   => 'Ruang Laboratorium',
             'capacity'      => 8,
         ]);
 
         Room::create([
             'id'            => 18,
-            'name'          => 'Seminar 18 Lantai 4',
+            'name'          => 'Lab Psikologi 18 Lantai 4',
             'description'   => 'Ruang Laboratorium',
             'capacity'      => 8,
         ]);
 
         Room::create([
             'id'            => 19,
-            'name'          => 'Seminar 19 Lantai 4',
+            'name'          => 'Lab Psikologi 19 Lantai 4',
             'description'   => 'Ruang Laboratorium',
             'capacity'      => 8,
         ]);
 
         Room::create([
             'id'            => 20,
-            'name'          => 'Seminar 20 Lantai 4',
+            'name'          => 'Lab Psikologi 20 Lantai 4',
             'description'   => 'Ruang Laboratorium',
             'capacity'      => 8,
         ]);
 
         Room::create([
             'id'            => 21,
-            'name'          => 'Seminar 21 Lantai 4',
+            'name'          => 'Lab Psikologi 21 Lantai 4',
             'description'   => 'Ruang Laboratorium',
             'capacity'      => 8,
         ]);
 
         Room::create([
             'id'            => 22,
-            'name'          => 'Seminar 22 Lantai 4',
+            'name'          => 'Lab Psikologi 22 Lantai 4',
             'description'   => 'Ruang Laboratorium',
             'capacity'      => 8,
         ]);

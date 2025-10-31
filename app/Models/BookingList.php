@@ -22,7 +22,8 @@ class BookingList extends Model
         'start_time',
         'end_time',
         'purpose',
-        'status'
+        'status',
+        'is_fixed',
     ];
 
     /**
