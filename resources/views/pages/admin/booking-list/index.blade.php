@@ -21,7 +21,7 @@
     @slot('table_header')
       <tr>
         <th>#</th>
-        <th>Foto</th>
+        <!-- <th>Foto</th> -->
         <th>Ruangan</th>
         <th>User</th>
         <th>Tanggal</th>
@@ -39,9 +39,9 @@
 
 <script>
 $(document).ready(function() {
-  $('#booking-list-table').DataTable({
+  const table = $('#booking-list-table').DataTable({
     processing: true,
-    serverSide: false, // client-side saja
+    serverSide: false,
     ajax: '{{ route('booking-list.json') }}',
     columnDefs: [
       {
@@ -57,34 +57,37 @@ $(document).ready(function() {
         render: $.fn.dataTable.render.ellipsis(20, true)
       },
     ],
-    order: [[4, 'desc'], [5, 'desc']],
+    order: [[4, 'asc'], [5, 'asc']], // Urut berdasar tanggal & jam mulai
     columns: [
       {
         data: 'index',
         orderable: false,
         searchable: false
       },
-      {
-        data: 'photo',
-        orderable: false,
-        searchable: false,
-        render: function (data, type, row) {
-          if (data) {
-            return `<div class="gallery gallery-fw">
-                      <a href="/storage/${data}" data-toggle="lightbox">
-                        <img src="/storage/${data}" class="img-fluid" style="min-width: 80px; height: auto;">
-                      </a>
-                    </div>`;
-          } else {
-            return '-';
-          }
-        }
-      },
+      // {
+      //   data: 'photo',
+      //   orderable: false,
+      //   searchable: false,
+      //   render: function (data) {
+      //     if (data && data !== '-') {
+      //       return `
+      //         <div class="gallery gallery-fw">
+      //           <a href="/storage/${data}" data-toggle="lightbox">
+      //             <img src="/storage/${data}" class="img-fluid" style="min-width: 80px; height: auto;">
+      //           </a>
+      //         </div>`;
+      //     }
+      //     return '-';
+      //   }
+      // },
       {
         data: 'room',
         orderable: false,
         render: function (data, type, row) {
-          let result = data;
+          let result = data || '-';
+
+          if (type === 'filter') return data ? data.toLowerCase() : '';
+
           const now = new Date();
           const dt = new Date(`${row.date}T${row.start_time}`);
           result += '<div class="table-links">';
@@ -92,66 +95,81 @@ $(document).ready(function() {
           if (dt > now && (row.status === 'PENDING' || row.status === 'DITOLAK')) {
             result += ` 
               <a href="javascript:;" data-id="${row.id}" 
-                data-title="Setujui" data-body="Yakin setujui booking ini?" 
-                data-value="1" class="text-primary" id="acc-btn">Setujui
-              </a>`;
-
+                 data-title="Setujui" data-body="Yakin setujui booking ini?" 
+                 data-value="1" class="text-primary" id="acc-btn">Setujui</a>`;
             if (row.status === 'PENDING') {
               result += '<div class="bullet"></div>';
             }
           }
 
           if (row.status === 'PENDING' || row.status === 'DISETUJUI') {
-            result += ` <a href="javascript:;" data-id="${row.id}" 
-                            data-title="Tolak" data-body="Yakin tolak booking ini?" 
-                            data-value="0" class="text-danger" id="deny-btn">Tolak</a>`;
+            result += ` 
+              <a href="javascript:;" data-id="${row.id}" 
+                 data-title="Tolak" data-body="Yakin tolak booking ini?" 
+                 data-value="0" class="text-danger" id="deny-btn">Tolak</a>`;
           }
 
           result += '</div>';
           return result;
         }
       },
-      {
-        data: 'user',
-        orderable: false
-      },
-      {
-        data: 'date'
-      },
-      {
-        data: 'start_time'
-      },
-      {
-        data: 'end_time'
-      },
-      {
-        data: 'purpose'
-      },
+      { data: 'user', orderable: false },
+      { data: 'date' },
+      { data: 'start_time' },
+      { data: 'end_time' },
+      { data: 'purpose' },
       {
         data: 'status',
         render: function (data) {
-          let badgeClass = {
+          const badgeClass = {
             'PENDING': 'info',
             'DISETUJUI': 'primary',
             'DIGUNAKAN': 'primary',
             'DITOLAK': 'danger',
             'EXPIRED': 'warning',
             'BATAL': 'warning',
-            'SELESAI': 'success'
+            'SELESAI': 'success',
+            'BOOKING_BY_LAB': 'warning',
           }[data] || 'secondary';
-
           return `<span class="badge badge-${badgeClass}">${data}</span>`;
         }
       },
     ]
   });
 
+  // ✅ Custom search — mendukung kata berurutan seperti “seminar 1” atau “lab psikologi 15”
+  $.fn.dataTable.ext.search.push(function(settings, data) {
+  const search = $('#booking-list-table_filter input').val().toLowerCase().trim();
+  if (!search) return true;
+
+  const room = (data[1] || '').toLowerCase();
+  const user = (data[2] || '').toLowerCase();
+  const date = (data[3] || '').toLowerCase();
+  const start_time = (data[4] || '').toLowerCase();
+  const end_time = (data[5] || '').toLowerCase();
+  const purpose = (data[6] || '').toLowerCase();
+  const status = (data[7] || '').toLowerCase();
+
+  const pattern = new RegExp(search, 'i');
+  return (
+    pattern.test(room) ||
+    pattern.test(user) ||
+    pattern.test(date) ||
+    pattern.test(start_time) ||
+    pattern.test(end_time) ||
+    pattern.test(purpose) ||
+    pattern.test(status)
+  );
+});
+
+
+  // ✅ Modal konfirmasi (Setujui/Tolak)
   $(document).on('click', '#acc-btn, #deny-btn', function() {
-    let id = $(this).data('id');
-    let title = $(this).data('title');
-    let body = $(this).data('body');
-    let value = $(this).data('value');
-    let submitClass = value === 1 ? 'btn btn-primary' : 'btn btn-danger';
+    const id = $(this).data('id');
+    const title = $(this).data('title');
+    const body = $(this).data('body');
+    const value = $(this).data('value');
+    const submitClass = value === 1 ? 'btn btn-primary' : 'btn btn-danger';
 
     $('.modal-title').html(title);
     $('.modal-body').html(body);
@@ -162,6 +180,7 @@ $(document).ready(function() {
     $('#confirm-modal').modal('show');
   });
 
+  // ✅ Lightbox gambar
   $(document).on('click', '[data-toggle="lightbox"]', function(e) {
     e.preventDefault();
     $(this).ekkoLightbox();

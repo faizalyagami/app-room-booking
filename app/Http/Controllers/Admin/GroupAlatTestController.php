@@ -15,11 +15,20 @@ class GroupAlatTestController extends Controller
 {
     public function list()
     {
-        $data = AlatTest::withSum([
-            'items' => function ($query) {
-                $query->where('status', 'tersedia');
-            }
-        ], 'quantity')->get();
+        /**
+         $data = AlatTest::withSum([
+             'items' => function ($query) {
+                 $query->where('status', 'tersedia');
+             }
+         ], 'quantity')->get();
+         */
+
+         //menghitung jumlah item tersedia
+        $data = AlatTest::withCount([
+        'items as items_sum_quantity' => function ($query) {
+            $query->where('status', 'tersedia');
+        }
+        ])->get();
 
         $result = [];
         // dd($data);

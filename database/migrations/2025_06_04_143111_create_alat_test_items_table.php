@@ -17,6 +17,8 @@ class CreateAlatTestItemsTable extends Migration
             $table->id();
             $table->unsignedBigInteger('alat_test_id');
             $table->string('serial_number')->unique();
+            $table->tinyInteger('type')->default(1);
+            $table->integer('quantity')->default(1);
             $table->enum('status', ['tersedia', 'dipinjam'])->default('tersedia');
             $table->timestamps();
         });
