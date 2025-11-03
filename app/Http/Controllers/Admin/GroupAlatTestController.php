@@ -24,24 +24,28 @@ class GroupAlatTestController extends Controller
          */
 
          //menghitung jumlah item tersedia
-        $data = AlatTest::withCount([
-        'items as items_sum_quantity' => function ($query) {
-            $query->where('status', 'tersedia');
-        }
-        ])->get();
+    $data = AlatTest::with(['items'])->get();
 
-        $result = [];
-        // dd($data);
-        foreach ($data as $index => $item) {
-            $result[] = [
-                'index' => $index + 1,
-                'id' => $item->id,
-                'photo'=> $item->photo,
-                'name' => $item->name,
-                'description' => $item->description,
-                'items_sum' => $item->items_sum_quantity
-            ];
+    $result = [];
+    foreach ($data as $index => $item) {
+        $totalStock = 0;
+        
+        foreach ($item->items as $alatItem) {
+            if ($alatItem->status === 'tersedia') {
+                // Jika tipe = 2 (Lembar), gunakan quantity, else gunakan 1
+                $totalStock += ($alatItem->type == 2) ? $alatItem->quantity : 1;
+            }
         }
+
+        $result[] = [
+            'index' => $index + 1,
+            'id' => $item->id,
+            'photo' => $item->photo,
+            'name' => $item->name,
+            'description' => $item->description,
+            'items_sum' => $totalStock,
+        ];
+    }
 
         return response()->json(['data' => $result]);
     }
