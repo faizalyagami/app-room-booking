@@ -48,7 +48,7 @@
                   <br />
 
                   <div style="text-align: center;">
-                    Daftar <a href="{{ route('register') }}"><strong>di sini</strong></a> jikan belum punya akun.
+                    Daftar <a href="{{ route('register') }}"><strong>di sini</strong></a> jika belum punya akun.
                   </div>
                 </div>
               </form>
