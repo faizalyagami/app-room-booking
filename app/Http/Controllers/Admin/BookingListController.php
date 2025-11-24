@@ -11,18 +11,37 @@ use DataTables;
 use Carbon\Carbon; 
 
 class BookingListController extends Controller { 
-    public function json() { $data = BookingList::with(['room', 'user'])
-        ->orderBy('date', 'desc')
-        ->orderBy('start_time', 'desc')
+    public function json() { 
+        $this->updateBookingStatus();
+
+        $data = BookingList::with(['room', 'user'])
+        ->orderByRaw("
+            CASE 
+                WHEN status = 'PENDING' THEN 1
+                WHEN status = 'DITOLAK' THEN 2
+                WHEN status = 'DISETUJUI' THEN 3
+                WHEN status = 'DIGUNAKAN' THEN 4
+                WHEN status = 'SELESAI' THEN 5
+                WHEN status = 'EXPIRED' THEN 6
+                WHEN status = 'BOOKING_BY_LAB' THEN 7
+                ELSE 8
+            END
+            ")
+        ->orderBy('date', 'asc')
+        ->orderBy('start_time', 'asc')
         ->get(); 
-        $result = $data->map(function ($item, $index) { 
+        $result = $data->map(function ($item, $index) {
+            $date = Carbon::parse($item->date);
+            $day = $this->getIndonesianDay($date->dayOfWeek);
+            $formattedDate = $item->date . '-' . $day; 
             return [
                  'index' => $index + 1, 
                  'id' => $item->id, 
                  'photo' => $item->room->photo ?? '-', 
                  'room' => $item->room->name ?? '-', 
                  'user' => $item->user->name ?? '-', 
-                 'date' => $item->date, 
+                 'date' => $item->date,
+                 'date_display' => $item->$formattedDate,
                  'start_time' => $item->start_time, 
                  'end_time' => $item->end_time, 
                  'purpose' => $item->purpose, 
@@ -30,14 +49,80 @@ class BookingListController extends Controller {
                 ]; 
             }); 
                 return response()->json([ 'data' => $result ]); 
-    } /** * Display a listing of the resource. * * @return \Illuminate\Http\Response */ 
+    } /** * Display a listing of the resource. * * @return \Illuminate\Http\Response */
+
+    private function updateBookingStatus() {
+        $now = Carbon::now();
+        $today = $now->toDateString();
+        $currentTime = $now->toTimeString();
+
+        try {
+            //1. booking sedang berlangsung: disetujui -> digunakan
+            $ongoingBookings = BookingList::where('date', $today)
+                ->where('start_time', '<=', $currentTime)
+                ->where('end_time', '>=', $currentTime)
+                ->where('status', 'DISETUJUI')
+                ->update(['status' => 'DIGUNAKAN']);
+            //2. booking sudah selesai (disetujui/digunakan -> selesai)
+            $todayCompleted = BookingList::where('date', $today)
+                ->where('end_time', '<', $currentTime)
+                ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN'])
+                ->update(['status' => 'SELESAI']);
+            $pastBookings = BookingList::where('date', '<', $today)
+                ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN'])
+                ->update(['status' => 'SELESAI']);
+            //3. booking Expired
+            $todayExpired = BookingList::where('date', $today)
+                ->where('status', 'PENDING')
+                ->update(['status' => 'EXPIRED']);
+            // booking yang akan datang
+            $pastExpired = BookingList::where('date', '<', $today)
+                ->where('status', 'PENDING')
+                ->update(['status' => 'EXPIRED']);
+            
+            \Log::info("Auto-update status: {$ongoingBookings} ongoing, {$todayCompleted} today completed, {$pastBookings} past bookings, {$todayExpired} today expired, {$pastExpired} past expired");
+        } catch (\Exception $e) {
+            \Log::error('Error updating booking status: ', $e->getMessage());
+        }
+    }
+
+    private function getIndonesianDay($dayOfWeek) {
+        $days = [
+            0 => 'Minggu',
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+        ];
+        return $days[$dayOfWeek] ?? '-';
+    }
     public function index() { return view('pages.admin.booking-list.index'); 
     } 
     public function update($id, $value) { 
         $item = BookingList::with(['room', 'user'])->findOrFail($id); 
-        $today = Carbon::today(); $now = Carbon::now(); 
-        $user_name = $item->user->name; $user_email = $item->user->email; 
-        $admin_name = Auth::user()->name; $admin_email = Auth::user()->email; 
+        $today = Carbon::today(); 
+        $now = Carbon::now(); 
+        $user_name = $item->user->name; 
+        $user_email = $item->user->email; 
+        $admin_name = Auth::user()->name; 
+        $admin_email = Auth::user()->email;
+
+        //CEK APAKAH BOOKING SUDAH EXPIRED/SELESAI (tidak bisa di-update)
+        $bookingDateTimeStart = Carbon::createFromFormat('Y-m-d H:i:s', $item->date . ' ' . $item->start_time);
+        $bookingDateTimeEnd = Carbon::createFromFormat('Y-m-d H:i:s', $item->date . ' ' . $item->end_time);
+
+        if ($now->greaterThan($bookingDateTimeEnd)) {
+            session()->flash('alert-failed', 'Tidak bisa mengupdate booking yang sudah EXPIRED/SELESAI');
+            return redirect()->route('booking-list.index');
+        }
+
+        if ($now->greaterThanOrEqualTo($bookingDateTimeStart)) {
+            session()->flash('alert-failed', 'Tidak bisa mengupdate booking yang sedang DIGUNAKAN');
+            return redirect()->route('booking-list.index');
+        }
+
         // tentukan status 
         if ($value == 1) { 
             $data['status'] = 'DISETUJUI'; 
