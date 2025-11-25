@@ -143,12 +143,13 @@ $(document).ready(function() {
             'DISETUJUI': 'primary',
             'DIGUNAKAN': 'primary',
             'DITOLAK': 'danger',
-            'EXPIRED': 'danger',
+            'EXPIRED': 'dark',
             'BATAL': 'warning',
             'SELESAI': 'success',
-            'BOOKING_BY_LAB': 'warning',
+            'BOOKING_BY_LAB': 'info',
           }[data] || 'secondary';
-          return `<span class="badge badge-${badgeClass}">${data}</span>`;
+          const textClass = (data === 'BATAL' || data === 'BATAL') ? 'text-dark' : '';
+          return `<span class="badge badge-${badgeClass} ${textClass}">${data}</span>`;
         }
       },
     ]
