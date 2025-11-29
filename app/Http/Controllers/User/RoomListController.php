@@ -34,6 +34,20 @@ class RoomListController extends Controller
         ]);
     }
 
+    private function formatTanggalWithHari($date) {
+        $hari = [
+            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'
+        ];
+
+        $carbonDate = Carbon::parse($date);
+        $namaHari = $hari[$carbonDate->dayOfWeek];
+        
+        if ($namaHari === "Jumat") {
+            $namaHari = "Jum'at";
+        }
+        return $carbonDate->format('d F Y') . ' - ' . $namaHari;
+    }
+
     public function json(Request $request)
     {
         $columns = ['id', 'photo', 'name', 'description', 'capacity'];
