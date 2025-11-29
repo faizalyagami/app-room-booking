@@ -43,6 +43,7 @@ $(document).ready(function() {
     processing: true,
     serverSide: false,
     ajax: '{{ route('booking-list.json') }}',
+    order: [],
     columnDefs: [
       {
         targets: [3],
@@ -59,7 +60,7 @@ $(document).ready(function() {
       },
     ],
 
-    order: [[7, 'asc'], [3, 'asc'], [4, 'asc']], // Urut berdasar tanggal & jam mulai
+    // order: [[7, 'asc'], [3, 'asc'], [4, 'asc']], // Urut berdasar tanggal & jam mulai
     columns: [
       {
         data: 'index',
