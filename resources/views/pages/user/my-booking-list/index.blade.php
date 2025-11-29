@@ -150,7 +150,7 @@
           else if(data === 'DITOLAK')
             result += `danger`;
           else if(data === 'EXPIRED')
-            result += `warning`;
+            result += `dark`;
           else if(data === 'BATAL')
             result += `warning`;
           else if(data === 'SELESAI')
