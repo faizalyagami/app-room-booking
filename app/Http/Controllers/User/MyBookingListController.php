@@ -71,26 +71,27 @@ class MyBookingListController extends Controller
      */
     public function store(MyBookingListRequest $request)
     {
-        $save = 1;
         $time = explode(" - ", $request->time);
         $room = Room::select('name')->where('id', $request->room_id)->firstOrFail();
-        $bookings = BookingList::where('date', $request->date)
+        
+        // ✅ FIX: CEK OVERLAP DENGAN STATUS DISETUJUI DAN BOOKING_BY_LAB
+        $isOverlap = BookingList::where('date', $request->date)
             ->where('room_id', $request->room_id)
-            ->where('status', 'DISETUJUI')
-            ->get();
+            ->whereIn('status', ['DISETUJUI', 'BOOKING_BY_LAB']) // ✅ TAMBAHKAN BOOKING_BY_LAB
+            ->where(function ($q) use ($time) {
+                $q->whereBetween('start_time', [$time[0], $time[1]])
+                ->orWhereBetween('end_time', [$time[0], $time[1]])
+                ->orWhere(function ($q2) use ($time) {
+                    $q2->where('start_time', '<=', $time[0])
+                        ->where('end_time', '>=', $time[1]);
+                });
+            })
+            ->exists();
 
-        if(count($bookings) > 0) {
-            foreach($bookings as $booking) {
-                if(date("H:i:s", strtotime($booking->start_time)) == date("H:i:s", strtotime($time[0]))) {
-                    $save = 0;
-                }
-            }
-        }
-
-        if($save == 0 ) {
+        if ($isOverlap) {
             $request->session()->flash('alert-failed', 'Ruangan '.$room->name.' di waktu itu sudah dibooking');
             return redirect()->route('my-booking-list.create');
-        } 
+        }
 
         $bookingDateTimeStart = Carbon::parse($request->date . ' ' . $time[0]);
         $bookingDateTimeEnd = Carbon::parse($request->date . ' ' . $time[1]);
@@ -101,57 +102,56 @@ class MyBookingListController extends Controller
             return redirect()->route('my-booking-list.create');
         }
 
-            $message = new BookingList();
-            $message->room_id = $request->room_id;
-            $message->user_id = auth()->user()->id;
-            $message->date = $request->date;
-            $message->start_time = $time[0];
-            $message->end_time = $time[1];
-            $message->status = 'PENDING';
-            $message->purpose = $request->purpose;
-            $message->save();
+        $message = new BookingList();
+        $message->room_id = $request->room_id;
+        $message->user_id = auth()->user()->id;
+        $message->date = $request->date;
+        $message->start_time = $time[0];
+        $message->end_time = $time[1];
+        $message->status = 'PENDING';
+        $message->purpose = $request->purpose;
+        $message->save();
 
-            // Ambil data user & admin
-            $user   = Auth::user();
-            $admin  = $this->getAdminData();
-            $status = 'DIBUAT';
+        // Ambil data user & admin
+        $user   = Auth::user();
+        $admin  = $this->getAdminData();
+        $status = 'DIBUAT';
 
-            // Email ke USER
-            dispatch(new SendEmail(
-                [$user->email], 
-                'room', // type
-                [
-                    'user_name'     => $user->name,
-                    'room_name'     => $room->name,
-                    'date'          => $request->date,
-                    'start_time'    => $time[0],
-                    'end_time'      => $time[1],
-                    'purpose'       => $request->purpose,
-                    'to_role'       => 'USER',
-                    'receiver_name' => $user->name,
-                    'url'           => URL::to('/my-booking-list'),
-                    'status'        => $status,
-                ]
-            ));
+        // Email ke USER
+        dispatch(new SendEmail(
+            [$user->email], 
+            'room', // type
+            [
+                'user_name'     => $user->name,
+                'room_name'     => $room->name,
+                'date'          => $request->date,
+                'start_time'    => $time[0],
+                'end_time'      => $time[1],
+                'purpose'       => $request->purpose,
+                'to_role'       => 'USER',
+                'receiver_name' => $user->name,
+                'url'           => URL::to('/my-booking-list'),
+                'status'        => $status,
+            ]
+        ));
 
-            // Email ke ADMIN
-            dispatch(new SendEmail(
-                [$admin->email], 
-                'room', // type
-                [
-                    'user_name'     => $user->name,
-                    'room_name'     => $room->name,
-                    'date'          => $request->date,
-                    'start_time'    => $time[0],
-                    'end_time'      => $time[1],
-                    'purpose'       => $request->purpose,
-                    'to_role'       => 'ADMIN',
-                    'receiver_name' => $admin->name,
-                    'url'           => URL::to('/admin/booking-list'),
-                    'status'        => $status,
-                ]
-            ));
-
+        // Email ke ADMIN
+        dispatch(new SendEmail(
+            [$admin->email], 
+            'room', // type
+            [
+                'user_name'     => $user->name,
+                'room_name'     => $room->name,
+                'date'          => $request->date,
+                'start_time'    => $time[0],
+                'end_time'      => $time[1],
+                'purpose'       => $request->purpose,
+                'to_role'       => 'ADMIN',
+                'receiver_name' => $admin->name,
+                'url'           => URL::to('/admin/booking-list'),
+                'status'        => $status,
+            ]
+        ));
             $request->session()->flash('alert-success', 'Booking ruang '.$room->name.' berhasil ditambahkan');
             return redirect()->route('my-booking-list.index');
         
