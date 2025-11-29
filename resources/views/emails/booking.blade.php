@@ -8,7 +8,7 @@
 </head>
 <body style="font-family: Arial, sans-serif; line-height:1.6; font-size:14px; color:#333;">
 
-    <p>Hai, <strong>{{ $receiver_name }}</strong></p>
+    <p>Assalamualaikum, <strong>{{ $receiver_name }}</strong></p>
 
     @if ($to_role == 'ADMIN')
         @if ($status == 'DIBUAT')
