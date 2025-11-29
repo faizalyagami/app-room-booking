@@ -8,7 +8,8 @@ use App\Models\BookingList;
 use App\Models\User; 
 use App\Jobs\SendEmail; 
 use DataTables; 
-use Carbon\Carbon; 
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class BookingListController extends Controller { 
     public function json() { 
@@ -161,18 +162,23 @@ class BookingListController extends Controller {
             $recipients = [ [ 'role' => 'USER', 'email' => $user_email, 'name' => $user_name, 'url' => URL::to('/my-booking-list'), ], [ 'role' => 'ADMIN', 'email' => $admin_email, 'name' => $admin_name, 'url' => URL::to('/admin/booking-list'), ], ];
             // kirim email ke user & admin 
             foreach ($recipients as $recipient) { 
-                dispatch(new SendEmail($recipient['email'], 'room', [
-                        'user_name'     => $user_name,
-                        'room_name'     => $item->room->name,
-                        'date'          => $item->date,
-                        'start_time'    => $item->start_time,
-                        'end_time'      => $item->end_time,
-                        'purpose'       => $item->purpose,
-                        'to_role'       => $recipient['role'],
-                        'receiver_name' => $recipient['name'],
-                        'url'           => $recipient['url'],
-                        'status'        => $data['status'],
-                    ]));
+                try {
+                    Mail::to($recipient['email'])->send(new \App\Mail\BookingMail(
+                        $user_name,
+                        $item->room->name,
+                        $item->date,
+                        $item->start_time,
+                        $item->end_time,
+                        $item->purpose,
+                        $recipient['role'],
+                        $recipient['name'],
+                        $recipient['url'],
+                        $data['status']
+                    ));
+                        \Log::info("Email berhasil dikirim ke: " . $recipient['email']);
+                    } catch (\Exception $e) {
+                        \Log::error('Gagal mengirim email ke ' . $recipient['email'] . ": " . $e->getMessage());
+                    }
                  }
                 } else { 
                     session()->flash('alert-failed', 'Booking Ruang '.$item->room->name.' gagal diupdate'); 
