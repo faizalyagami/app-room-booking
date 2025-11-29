@@ -73,7 +73,7 @@
         </li>
         <li class="{{ request()->is('admin/user*') ? 'active' : '' }}">
           <a class="nav-link" href="{{ route('user.index') }}">
-            <i class="fas fa-user"></i> <span>User</span>
+            <i class="fas fa-user"></i> <span>Mahasiswa</span>
           </a>
         </li>
 
