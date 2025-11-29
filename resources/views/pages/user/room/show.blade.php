@@ -75,10 +75,39 @@
             @foreach ($bookings as $booking)
                 <tr>
                   <td>{{ $booking->user->name }}</td>
-                  <td>{{ date("d F Y", strtotime($booking->date)) }}</td>
+                  <td>
+                    @php
+                        $hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                        $carbonDate = \Carbon\Carbon::parse($booking->date);
+                        $namaHari = $hari[$carbonDate->dayOfWeek];
+                        if ($namaHari === 'Jumat') {
+                            $namaHari = "Jum'at";
+                        }
+                    @endphp
+                    {{ $carbonDate->format('d F Y') }} - {{ $namaHari }}
+                  </td>
                   <td>{{ date("H:i", strtotime($booking->start_time)) }} - {{ date("H:i", strtotime($booking->end_time)) }}</td>
                   <td>{{ $booking->purpose }}</td>
-                  <td>{{ $booking->status }}</td>
+                  <td>
+                    {{-- ✅ TAMBAHKAN BADGE UNTUK STATUS --}}
+                    @php
+                        $badgeClass = [
+                            'PENDING' => 'info',
+                            'DISETUJUI' => 'primary',
+                            'DIGUNAKAN' => 'primary',
+                            'DITOLAK' => 'danger',
+                            'EXPIRED' => 'dark',
+                            'BATAL' => 'warning',
+                            'SELESAI' => 'success',
+                            'BOOKING_BY_LAB' => 'info',
+                        ][$booking->status] ?? 'secondary';
+                        
+                        $textClass = ($booking->status === 'BATAL' || $booking->status === 'BOOKING_BY_LAB') ? 'text-dark' : '';
+                    @endphp
+                    <span class="badge badge-{{ $badgeClass }} {{ $textClass }}">
+                      {{ $booking->status }}
+                    </span>
+                  </td>
                 </tr>
             @endforeach
           @endif
