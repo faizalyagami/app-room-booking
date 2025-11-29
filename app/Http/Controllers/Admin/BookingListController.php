@@ -41,7 +41,7 @@ class BookingListController extends Controller {
                  'room' => $item->room->name ?? '-', 
                  'user' => $item->user->name ?? '-', 
                  'date' => $item->date,
-                 'date_display' => $item->$formattedDate,
+                 'date_display' => $formattedDate,
                  'start_time' => $item->start_time, 
                  'end_time' => $item->end_time, 
                  'purpose' => $item->purpose, 
@@ -55,6 +55,7 @@ class BookingListController extends Controller {
         $now = Carbon::now();
         $today = $now->toDateString();
         $currentTime = $now->toTimeString();
+        $oneDayAgo = $now->copy()->subDay();
 
         try {
             //1. booking sedang berlangsung: disetujui -> digunakan
@@ -63,27 +64,27 @@ class BookingListController extends Controller {
                 ->where('end_time', '>=', $currentTime)
                 ->where('status', 'DISETUJUI')
                 ->update(['status' => 'DIGUNAKAN']);
-            //2. booking sudah selesai (disetujui/digunakan -> selesai)
+            // 2. Booking sudah selesai (DISETUJUI/DIGUNAKAN -> SELESAI)
+            // Selesai untuk booking hari ini yang sudah lewat end_time
             $todayCompleted = BookingList::where('date', $today)
                 ->where('end_time', '<', $currentTime)
                 ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN'])
                 ->update(['status' => 'SELESAI']);
-            $pastBookings = BookingList::where('date', '<', $today)
+
+            // Selesai untuk booking di tanggal sebelumnya
+            $pastCompleted = BookingList::where('date', '<', $today)
                 ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN'])
                 ->update(['status' => 'SELESAI']);
-            //3. booking Expired
-            $todayExpired = BookingList::where('date', $today)
-                ->where('status', 'PENDING')
-                ->update(['status' => 'EXPIRED']);
-            // booking yang akan datang
-            $pastExpired = BookingList::where('date', '<', $today)
-                ->where('status', 'PENDING')
+
+            // 3. HANYA booking yang dibuat lebih dari 1 hari dan masih PENDING -> EXPIRED
+            $unapprovedExpired = BookingList::where('status', 'PENDING')
+                ->where('created_at', '<=', $oneDayAgo)
                 ->update(['status' => 'EXPIRED']);
             
-            \Log::info("Auto-update status: {$ongoingBookings} ongoing, {$todayCompleted} today completed, {$pastBookings} past bookings, {$todayExpired} today expired, {$pastExpired} past expired");
-        } catch (\Exception $e) {
-            \Log::error('Error updating booking status: ', $e->getMessage());
-        }
+            \Log::info("Auto-update status: {$ongoingBookings} ongoing, {$todayCompleted} today completed, {$pastCompleted} past completed, {$unapprovedExpired} unapproved expired (1 day)");
+            } catch (\Exception $e) {
+                \Log::error('Error updating booking status: ' . $e->getMessage());
+            }
     }
 
     private function getIndonesianDay($dayOfWeek) {
@@ -138,7 +139,16 @@ class BookingListController extends Controller {
         // cek overlap hanya jika disetujui 
         $isOverlap = false; 
         if ($data['status'] == 'DISETUJUI') { 
-            $isOverlap = BookingList::where('date', $item->date) ->where('room_id', $item->room_id) ->where('status', 'DISETUJUI') ->where(function ($q) use ($item) { $q->whereBetween('start_time', [$item->start_time, $item->end_time]) ->orWhereBetween('end_time', [$item->start_time, $item->end_time]) ->orWhere(function ($q2) use ($item) { $q2->where('start_time', '<=', $item->start_time) ->where('end_time', '>=', $item->end_time); 
+            $isOverlap = BookingList::where('date', $item->date) 
+            ->where('room_id', $item->room_id)
+            ->where('id', '!=', $item->id)
+            ->whereIn('status', ['DISETUJUI', 'BOOKING_BY_LAB']) 
+            ->where(function ($q) use ($item) { 
+                $q->whereBetween('start_time', [$item->start_time, $item->end_time]) 
+                ->orWhereBetween('end_time', [$item->start_time, $item->end_time]) 
+                ->orWhere(function ($q2) use ($item) { 
+                    $q2->where('start_time', '<=', $item->start_time) 
+                    ->where('end_time', '>=', $item->end_time); 
             }); 
         }) ->exists(); 
         } if ($data['status'] == 'DISETUJUI' && $isOverlap) { session()->flash('alert-failed', 'Ruangan '.$item->room->name.' di waktu itu sudah dibooking'); 
