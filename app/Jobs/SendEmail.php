@@ -51,7 +51,18 @@ class SendEmail
                     $this->data['status']
                 ));
             } elseif ($this->type === 'alat_test') {
-                Mail::to($receiver)->send(new AlatTestBookingMail($this->data));
+                Mail::to($receiver)->send(new AlatTestBookingMail(
+                    $this->data['user_name'],
+                    $this->data['items'],
+                    $this->data['date'],
+                    $this->data['start_time'],
+                    $this->data['end_time'],
+                    $this->data['purpose'],
+                    $this->data['to_role'],
+                    $this->data['receiver_name'],
+                    $this->data['url'],
+                    $this->data['status']
+                ));
             }
         }
     }
