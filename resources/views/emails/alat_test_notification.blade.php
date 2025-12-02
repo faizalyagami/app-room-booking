@@ -1,7 +1,7 @@
 @component('mail::message')
 # Notifikasi Peminjaman Alat Test
 
-Halo **{{ $userName }}**,
+Assalamualaikum **{{ $userName }}**,
 
 Status peminjaman alat test Anda saat ini: **{{ $status }}**
 
