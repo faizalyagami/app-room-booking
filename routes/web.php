@@ -61,6 +61,10 @@ Route::group(['namespace' => 'App\Http\Controllers'] , function() {
     
 });
 
+Route::get('/day-times/get-times', [App\Http\Controllers\DayTimeController::class, 'getTimes'])
+    ->name('day-times.get-times')
+    ->middleware('auth');
+
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
 Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
 Route::patch('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
