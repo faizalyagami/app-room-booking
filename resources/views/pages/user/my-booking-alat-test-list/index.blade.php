@@ -105,7 +105,7 @@
             if(data === 'PENDING') 
               result += `info`;
             else if(data === 'DISETUJUI')
-              result += `primary`;
+              result += `success`;
             else if(data === 'DITOLAK')
               result += `danger`;
             else if(data === 'EXPIRED')

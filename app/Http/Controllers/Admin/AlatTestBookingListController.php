@@ -8,134 +8,185 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL; 
 use App\Models\AlatTestBooking; 
 use App\Models\AlatTestItemBooking; 
-use App\Mail\BookingToolMail; 
 use DataTables; 
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon; 
+use Illuminate\Support\Facades\DB;
 
 class AlatTestBookingListController extends Controller 
 { 
-    public function json() { 
-        $data = AlatTestBooking::with(['user'])
-            ->orderByRaw("CASE 
-                WHEN status = 'PENDING' THEN 1
-                WHEN status = 'DISETUJUI' THEN 2
-                WHEN status = 'DITOLAK' THEN 3
-                WHEN status = 'EXPIRED' THEN 4
-                WHEN status = 'DIKEMBALIKAN' THEN 5
-                WHEN status = 'BATAL' THEN 6
-                ELSE 7 END")
-            ->orderBy('date', 'desc')
-            ->orderBy('start_time', 'desc')
-            ->get();
+    public function json(Request $request) { 
+        // Update status expired sebelum mengambil data
+        $this->updateBookingAlatTestStatus();
 
-        $result = $data->map(function ($item, $index) {
-                // Gunakan accessor untuk mendapatkan status otomatis
-                $status = $item->status;
-                $badgeClass = '';
+        $query = AlatTestBooking::with(['user']);
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('action', function($row) {
+                return '<div class="table-links">
+                    <a href="'.route('alat-test-booking-list.show', $row->id).'" class="text-info">Detail</a>
+                </div>';
+            })
+            ->addColumn('date_formatted', function($row) {
+                $date = Carbon::parse($row->date);
+                $day = $this->getIndonesianDay($date->dayOfWeek);
+                return $row->date . ' - ' . $day;
+            })
+            ->addColumn('status_badge', function($row) {
+                $badgeClass = 'badge-';
                 
-                switch($status) {
-                    case 'PENDING':
-                        $badgeClass = 'warning';
-                        break;
-                    case 'DISETUJUI':
-                        $badgeClass = 'success';
-                        break;
-                    case 'DITOLAK':
-                        $badgeClass = 'danger';
-                        break;
-                    case 'EXPIRED':
-                        $badgeClass = 'secondary';
-                        break;
-                    case 'DIKEMBALIKAN':
-                        $badgeClass = 'info';
-                        break;
-                    case 'BATAL':
-                        $badgeClass = 'dark';
-                        break;
-                    default:
-                        $badgeClass = 'info';
+                switch($row->status) {
+                    case 'PENDING': $badgeClass .= 'info'; break;
+                    case 'DISETUJUI': $badgeClass .= 'success'; break;
+                    case 'DITOLAK': $badgeClass .= 'danger'; break;
+                    case 'EXPIRED': $badgeClass .= 'warning'; break;
+                    case 'BATAL': $badgeClass .= 'warning'; break;
+                    case 'DIKEMBALIKAN': $badgeClass .= 'success'; break;
+                    default: $badgeClass .= 'secondary';
                 }
                 
-                $statusHtml = '<span class="badge badge-'.$badgeClass.'">'.strtoupper($status).'</span>';
-                
-                return [ 
-                    'index' => $index + 1, 
-                    'id' => $item->id, 
-                    'user' => $item->user->name ?? '-', 
-                    'date' => $item->date, 
-                    'start_time' => $item->start_time, 
-                    'end_time' => $item->end_time, 
-                    'purpose' => $item->purpose, 
-                    'status' => $statusHtml,
-                    'raw_status' => $status, // Untuk sorting/filter
-                ];
-            });
+                return '<span class="badge ' . $badgeClass . '">' . $row->status . '</span>';
+            })
+            ->rawColumns(['action', 'status_badge'])
+            ->orderColumn('status', function($query, $order) {
+               
+                $query->orderByRaw("
+                    CASE 
+                        WHEN status = 'PENDING' THEN 1
+                        WHEN status = 'DISETUJUI' THEN 2
+                        WHEN status = 'DITOLAK' THEN 3
+                        WHEN status = 'DIKEMBALIKAN' THEN 4
+                        WHEN status = 'EXPIRED' THEN 5
+                        WHEN status = 'BATAL' THEN 6
+                        ELSE 7
+                    END $order
+                ");
+            })
+            ->make(true);
+    }
 
-            return response()->json(['data' => $result ]); 
+   
+    private function updateBookingAlatTestStatus() {
+        try {
+            $now = Carbon::now();
+            $today = $now->toDateString(); // Format: YYYY-MM-DD
+            
+            Log::info("=== START AUTO-UPDATE ALAT TEST STATUS ===");
+            Log::info("Current date: {$today}");
+            Log::info("Current time: " . $now->toTimeString());
+            
+            // 1. CEK DATA SEBELUM UPDATE
+            $pendingBookings = AlatTestBooking::where('status', 'PENDING')->get();
+            Log::info("Total PENDING bookings: " . $pendingBookings->count());
+            
+            foreach ($pendingBookings as $booking) {
+                Log::info("  - ID: {$booking->id}, Date: {$booking->date}, Created: {$booking->created_at}");
+            }
+            
+            // 2. UPDATE SEMUA PENDING YANG TANGGALNYA SUDAH LEWAT
+            $expiredCount = DB::update("
+                UPDATE alat_test_bookings 
+                SET status = 'EXPIRED', updated_at = ? 
+                WHERE status = 'PENDING' 
+                AND date < ?
+            ", [$now, $today]);
+            
+            Log::info("Expired bookings (date < {$today}): {$expiredCount}");
+            
+            // 3. UPDATE JUGA PENDING YANG DIBUAT LEBIH DARI 24 JAM YANG LALU
+            $twentyFourHoursAgo = $now->copy()->subHours(24);
+            $expiredByTime = DB::update("
+                UPDATE alat_test_bookings 
+                SET status = 'EXPIRED', updated_at = ? 
+                WHERE status = 'PENDING' 
+                AND created_at <= ?
+            ", [$now, $twentyFourHoursAgo]);
+            
+            Log::info("Expired bookings (>24h old): {$expiredByTime}");
+            
+            // 4. UPDATE DISETUJUI YANG SUDAH LEWAT -> DIKEMBALIKAN
+            $returnedCount = 0;
+            
+            // 4a. Tanggal kemarin atau sebelumnya
+            $pastApproved = AlatTestBooking::where('status', 'DISETUJUI')
+                ->where('date', '<', $today)
+                ->get();
+                
+            foreach ($pastApproved as $booking) {
+                DB::transaction(function () use ($booking, $now) {
+                    $booking->status = 'DIKEMBALIKAN';
+                    $booking->updated_at = $now;
+                    $booking->save();
+                    
+                    Log::info("Auto-returned past booking: ID={$booking->id}, Date={$booking->date}");
+                    
+                    // Update alat
+                    foreach ($booking->alatTestItemBooking as $item) {
+                        if ($item->alatTestItem) {
+                            $item->alatTestItem->status = 'TERSEDIA';
+                            $item->alatTestItem->save();
+                        }
+                    }
+                });
+                $returnedCount++;
+            }
+            
+            // 4b. Hari ini tapi waktu sudah lewat
+            $todayCompleted = AlatTestBooking::where('status', 'DISETUJUI')
+                ->where('date', $today)
+                ->where('end_time', '<', $now->toTimeString())
+                ->get();
+                
+            foreach ($todayCompleted as $booking) {
+                DB::transaction(function () use ($booking, $now) {
+                    $booking->status = 'DIKEMBALIKAN';
+                    $booking->updated_at = $now;
+                    $booking->save();
+                    
+                    Log::info("Auto-returned today booking: ID={$booking->id}, End={$booking->end_time}");
+                    
+                    foreach ($booking->alatTestItemBooking as $item) {
+                        if ($item->alatTestItem) {
+                            $item->alatTestItem->status = 'TERSEDIA';
+                            $item->alatTestItem->save();
+                        }
+                    }
+                });
+                $returnedCount++;
+            }
+            
+            Log::info("=== AUTO-UPDATE COMPLETED ===");
+            Log::info("Total expired: " . ($expiredCount + $expiredByTime));
+            Log::info("Total returned: {$returnedCount}");
+            
+            // 5. CEK DATA SETELAH UPDATE
+            $remainingPending = AlatTestBooking::where('status', 'PENDING')->count();
+            Log::info("Remaining PENDING bookings: {$remainingPending}");
+            
+        } catch (\Exception $e) {
+            Log::error('ERROR in updateBookingAlatTestStatus: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+        }
+    }
+
+    private function getIndonesianDay($dayOfWeek) {
+        $days = [
+            0 => 'Minggu',
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+        ];
+        return $days[$dayOfWeek] ?? '-';
     }
 
     public function index() { 
-        // Jalankan pengecekan expired otomatis setiap kali halaman diakses
-        $this->checkAndUpdateExpiredBookings();
-        
-        return view('pages.admin.alat-test-booking-list.index');
-    }
-    
-    /**
-     * Method untuk mengecek dan update booking yang expired
-     */
-    private function checkAndUpdateExpiredBookings()
-    {
-        // Cari semua booking dengan status PENDING yang tanggal bookingnya sudah lewat
-        $yesterday = Carbon::yesterday()->format('Y-m-d');
-        
-        $expiredBookings = AlatTestBooking::where('status', 'PENDING')
-            ->whereDate('date', '<=', $yesterday)
-            ->get();
-        
-        foreach ($expiredBookings as $booking) {
-            // Update status menjadi EXPIRED
-            $booking->status = 'EXPIRED';
-            $booking->save();
-            
-            // Kirim notifikasi email (opsional)
-            $this->sendExpiredNotification($booking);
-        }
-    }
-    
-    /**
-     * Kirim notifikasi expired ke user (opsional)
-     */
-    private function sendExpiredNotification($booking)
-    {
-        try {
-            $user_email = $booking->user->email;
-            $user_name = $booking->user->name;
-            
-            $items = $booking->alatTestItemBooking->map(function($row) {
-                return [
-                    'name'   => $row->alatTestItem->alatTest->nama_alat ?? $row->alatTestItem->alatTest->name,
-                    'serial' => $row->alatTestItem->serial_number,
-                ];
-            })->toArray();
-            
-            Mail::to($user_email)->send(new AlatTestBookingMail(
-                $user_name,
-                $items,
-                $booking->date,
-                $booking->start_time,
-                $booking->end_time,
-                $booking->purpose,
-                'USER',
-                $user_name,
-                url('/my-booking-alat-test-list/'.$booking->id),
-                'EXPIRED'
-            ));
-        } catch (\Exception $e) {
-            // Log error jika email gagal dikirim
-            \Log::error('Gagal mengirim email expired notification: ' . $e->getMessage());
-        }
-    }
+        $this->updateBookingAlatTestStatus();
+        return view('pages.admin.alat-test-booking-list.index'); 
+    } 
 
     public function show($id) 
     { 
@@ -154,52 +205,76 @@ class AlatTestBookingListController extends Controller
         return view('pages.admin.alat-test-booking-list.show', compact('booking'));
     }
 
-    public function update($id, $value) 
-    {
-        $item = AlatTestBooking::with(['alatTestItemBooking.alatTestItem.alatTest', 'user'])
-            ->findOrFail($id);
-
-        // Cek jika booking sudah EXPIRED
-        if ($item->status === 'EXPIRED') {
-            session()->flash('alert-failed', 'Tidak dapat mengupdate booking yang sudah EXPIRED');
-            return redirect()->route('alat-test-booking-list.index');
-        }
-        
-        // Cek jika booking sudah BATAL
-        if ($item->status === 'BATAL') {
-            session()->flash('alert-failed', 'Tidak dapat mengupdate booking yang sudah BATAL');
-            return redirect()->route('alat-test-booking-list.index');
-        }
-
-        $today = Carbon::today()->toDateString();
-        $now   = Carbon::now()->toTimeString();
-
-        $user_name  = $item->user->name;
-        $user_email = $item->user->email;
-        $admin_name = Auth::user()->name;
-        $admin_email = Auth::user()->email;
-
-        if ($value == 1) {
-            $data['status'] = 'DISETUJUI';
-        } else if ($value == 2) {
-            $data['status'] = 'DIKEMBALIKAN';
-        } else if ($value == 0) {
-            $data['status'] = 'DITOLAK';
-        } else {
-            session()->flash('alert-failed', 'Perintah tidak dimengerti');
-            return redirect()->route('alat-test-booking-list.index');
-        }
-
-        // Validasi: hanya bisa update jika booking belum lewat
-        // Kecuali untuk status DITOLAK yang bisa dilakukan kapan saja
-        if ($data['status'] === 'DITOLAK' || 
-            $item['date'] > $today || 
-            ($item['date'] == $today && $item['start_time'] > $now)) {
+    public function update($id, $value) { 
+        try {
+            DB::beginTransaction();
             
+            $item = AlatTestBooking::with(['alatTestItemBooking.alatTestItem.alatTest', 'user'])->findOrFail($id); 
+            
+            // CEK APAKAH BOOKING SUDAH EXPIRED/BATAL/DIKEMBALIKAN
+            if (in_array($item->status, ['EXPIRED', 'BATAL', 'DIKEMBALIKAN'])) {
+                session()->flash('alert-failed', 'Tidak bisa mengupdate booking yang sudah ' . $item->status);
+                return redirect()->route('alat-test-booking-list.index');
+            }
+
+            $user_name = $item->user->name; 
+            $user_email = $item->user->email; 
+            $admin_name = Auth::user()->name; 
+            $admin_email = Auth::user()->email;
+
+            // TENTUKAN STATUS BARU
+            if ($value == 1) { 
+                $data['status'] = 'DISETUJUI'; 
+                
+                // Cek apakah tanggal booking sudah lewat
+                $bookingDate = Carbon::parse($item->date);
+                $today = Carbon::today();
+                
+                if ($bookingDate->lt($today)) {
+                    session()->flash('alert-failed', 'Tidak bisa menyetujui booking yang tanggalnya sudah lewat');
+                    DB::rollBack();
+                    return redirect()->route('alat-test-booking-list.index');
+                }
+                
+                // Update status alat
+                foreach ($item->alatTestItemBooking as $itemBooking) {
+                    if ($itemBooking->alatTestItem) {
+                        $itemBooking->alatTestItem->status = 'DIPINJAM';
+                        $itemBooking->alatTestItem->save();
+                    }
+                }
+                
+            } elseif ($value == 2) { 
+                $data['status'] = 'DIKEMBALIKAN'; 
+                
+                foreach ($item->alatTestItemBooking as $itemBooking) {
+                    if ($itemBooking->alatTestItem) {
+                        $itemBooking->alatTestItem->status = 'TERSEDIA';
+                        $itemBooking->alatTestItem->save();
+                    }
+                }
+                
+            } elseif ($value == 0) { 
+                $data['status'] = 'DITOLAK'; 
+                
+                if ($item->status == 'DISETUJUI') {
+                    foreach ($item->alatTestItemBooking as $itemBooking) {
+                        if ($itemBooking->alatTestItem && $itemBooking->alatTestItem->status == 'DIPINJAM') {
+                            $itemBooking->alatTestItem->status = 'TERSEDIA';
+                            $itemBooking->alatTestItem->save();
+                        }
+                    }
+                }
+                
+            } else { 
+                session()->flash('alert-failed', 'Perintah tidak dimengerti'); 
+                return redirect()->route('alat-test-booking-list.index'); 
+            }
+
+            // UPDATE DATA
             if ($item->update($data)) { 
                 session()->flash('alert-success', 'Booking Alat Test sekarang ' . $data['status']); 
                 
-                // AMBIL SEMUA ALAT + SERIAL (ARRAY)
                 $items = $item->alatTestItemBooking->map(function($row) {
                     return [
                         'name'   => $row->alatTestItem->alatTest->nama_alat ?? $row->alatTestItem->alatTest->name,
@@ -234,78 +309,21 @@ class AlatTestBookingListController extends Controller
                     url('/admin/alat-test-booking-list/'.$item->id),
                     $data['status']
                 ));
-            } else {
+                
+                DB::commit();
+                
+            } else { 
+                DB::rollBack();
                 session()->flash('alert-failed', 'Booking Alat Test gagal diupdate'); 
-            }
-        } else { 
-            session()->flash('alert-failed', 'Permintaan booking itu tidak lagi bisa diupdate');
-        }
-
-        return redirect()->route('alat-test-booking-list.index'); 
-    }
-    
-    /**
-     * Method untuk force update status ke EXPIRED (manual)
-     */
-    public function expire($id)
-    {
-        $item = AlatTestBooking::with(['alatTestItemBooking.alatTestItem.alatTest', 'user'])
-            ->findOrFail($id);
+            } 
             
-        // Hanya bisa expire booking yang masih PENDING
-        if ($item->status !== 'PENDING') {
-            session()->flash('alert-failed', 'Hanya booking dengan status PENDING yang bisa di-expire');
-            return redirect()->route('alat-test-booking-list.show', $id);
-        }
-        
-        $item->status = 'EXPIRED';
-        $item->save();
-        
-        // Kirim notifikasi
-        $user_name  = $item->user->name;
-        $user_email = $item->user->email;
-        
-        $items = $item->alatTestItemBooking->map(function($row) {
-            return [
-                'name'   => $row->alatTestItem->alatTest->nama_alat ?? $row->alatTestItem->alatTest->name,
-                'serial' => $row->alatTestItem->serial_number,
-            ];
-        })->toArray();
-        
-        // Email ke USER
-        Mail::to($user_email)->send(new AlatTestBookingMail(
-            $user_name,
-            $items,
-            $item->date,
-            $item->start_time,
-            $item->end_time,
-            $item->purpose,
-            'USER',
-            Auth::user()->name,
-            url('/my-booking-alat-test-list/'.$item->id),
-            'EXPIRED'
-        ));
-        
-        session()->flash('alert-success', 'Booking berhasil di-expire');
-        return redirect()->route('alat-test-booking-list.show', $id);
-    }
-    
-    /**
-     * Method untuk menampilkan semua booking yang expired
-     */
-    public function expired()
-    {
-        $expiredBookings = AlatTestBooking::with(['user'])
-            ->where('status', 'EXPIRED')
-            ->orWhere(function($query) {
-                $query->where('status', 'PENDING')
-                    ->whereDate('date', '<', Carbon::today());
-            })
-            ->orderBy('date', 'desc')
-            ->orderBy('start_time', 'desc')
-            ->get();
+            return redirect()->route('alat-test-booking-list.index');
             
-        return view('pages.admin.alat-test-booking-list.expired', compact('expiredBookings'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating alat test booking: ' . $e->getMessage());
+            session()->flash('alert-failed', 'Terjadi kesalahan: ' . $e->getMessage());
+            return redirect()->route('alat-test-booking-list.index');
+        }
     }
-
-}
+} 
