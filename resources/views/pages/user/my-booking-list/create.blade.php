@@ -36,30 +36,46 @@
 
           <div class="form-group">
             <label for="room_id">Nama Ruangan</label>
-            <select name="room_id" class="form-control" id="room_id">
+            <select name="room_id" class="form-control" id="room_id" required>
               <option value="">Pilih Ruangan</option>
               @foreach ($rooms as $room)
                 <option value="{{ $room->id }}" {{ old('room_id') == $room->id ? 'selected' : '' }}>{{ $room->name }}</option>
               @endforeach
             </select>
+            @error('room_id')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
           </div>
+          
           <div class="form-group">
             <label for="date">Tanggal Booking</label>
-            <input type="text" name="date" class="form-control datepicker" data-min-date="{{ $nowdate }}" id="date">
+            <input type="text" name="date" class="form-control datepicker" data-min-date="{{ $nowdate }}" id="date" required>
+            @error('date')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
           </div>
+          
           <div class="form-group">
             <label for="time">Waktu Booking</label>
-            <select name="time" class="form-control" id="time">
+            <select name="time" class="form-control" id="time" required>
               <option value="">Pilih Waktu</option>
             </select>
+            @error('time')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
           </div>
+          
           <div class="form-group">
             <label for="purpose">Keperluan</label>
-            <textarea name="purpose" class="form-control" id="purpose" style="height: 185px;"></textarea>
+            <textarea name="purpose" class="form-control" id="purpose" style="height: 185px;" required>{{ old('purpose') }}</textarea>
+            @error('purpose')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
           </div>
-          <div class="card-footer  text-right ">
-            <button class="btn btn-primary">Simpan</button>
-            <a type="button" href="{{ route('my-booking-list.index') }}" class="btn btn-secondary">Cancel</a>
+          
+          <div class="card-footer text-right">
+            <button type="submit" class="btn btn-primary">Simpan</button>
+            <a href="{{ route('my-booking-list.index') }}" class="btn btn-secondary">Cancel</a>
           </div>
         </form>
 
@@ -85,56 +101,105 @@
   {{-- datepicker  --}}
 
   <script>
+    $(document).ready(function() {
+      // Initialize datepicker
+      $('.datepicker').daterangepicker({
+        singleDatePicker: true,
+        showDropdowns: true,
+        minDate: moment(),
+        locale: {
+          format: 'YYYY-MM-DD'
+        }
+      });
+
+      // Load times if date and room are already selected (after validation error)
+      if($("#date").val() && $("#room_id").val()) {
+        getTimes();
+      }
+    });
+
     window.getTimes = function () {
       var date = $("#date").val();
       var room = $("#room_id").val();
-      var ajaxurl = "/day-times/get-times";
+      var ajaxurl = "{{ route('day-times.get-times') }}"; // Gunakan route name
+
+      // Clear previous options
+      $("#time").html(`<option value="">Memuat waktu...</option>`);
 
       if(date != "" && room != "") {
         $.ajax({
           url: ajaxurl, 
           dataType: 'JSON', 
           type: 'GET', 
-          async: false, 
           data: {
             date: date, 
             room: room
           }, 
-          success: function success(response) {
-            var days = response.data;
-
+          success: function(response) {
             if(response.status == 'success') {
-              if(days != null) {
-                let bookings = days.bookings;
-                let html = `<option value="">Pilih Waktu</option>`;
-                let booked = '';
+              var days = response.data;
+              let html = `<option value="">Pilih Waktu</option>`;
+
+              if(days != null && days.times.length > 0) {
+                let bookings = days.bookings || [];
                 
-                days.times.map( (item, index) => {
+                // Buat mapping booked slots dengan status
+                let bookedSlots = {};
+                bookings.forEach(function(booking) {
+                  bookedSlots[booking.start_time] = booking.status;
+                });
+
+                days.times.forEach(function(item) {
                   let start = item.start_time.substring(0, item.start_time.lastIndexOf(':'));
                   let end = item.end_time.substring(0, item.end_time.lastIndexOf(':'));
+                  let startTimeFull = item.start_time;
+                  let bookedStatus = bookedSlots[startTimeFull];
+                  let isDisabled = false;
+                  let label = '';
+                  let title = '';
 
-                  if(bookings && bookings.length > 0) {
-                    booked = '';
-                    if(bookings.indexOf(item.start_time) != -1) {
-                      booked = '(Booked)';
+                  if (bookedStatus) {
+                    isDisabled = true;
+                    // Tentukan label dan warna berdasarkan status
+                    if (bookedStatus === 'BOOKING_BY_LAB') {
+                      label = ' (Booked by Lab)';
+                      title = 'Slot waktu ini sudah dibooking oleh laboratorium';
+                    } else {
+                      label = ' (Booked)';
+                      title = 'Slot waktu ini sudah dibooking';
                     }
                   }
 
                   html += `
-                    <option `+ (booked != '' ? 'disabled' : '') +` value="`+ start +` - `+ end +`">`+ start +` - `+ end +` `+ booked +`</option>
+                    <option ${isDisabled ? 'disabled style="color: #6c757d; background-color: #e9ecef; cursor: not-allowed;"' : ''} 
+                            value="${start} - ${end}"
+                            title="${title}">
+                      ${start} - ${end}${label}
+                    </option>
                   `;
                 });
-
-                $("#time").html(html);
+              } else {
+                html = `<option value="">Tidak ada waktu tersedia</option>`;
               }
+
+              $("#time").html(html);
             } else {
-              $("#time").html(`<option value="">Pilih Waktu</option>`);
-              console.log(response.message);
+              $("#time").html(`<option value="">${response.message || 'Gagal memuat waktu'}</option>`);
+              console.error('Error from server:', response.message);
+            }
+          },
+          error: function(xhr, status, error) {
+            console.error("Error fetching times:", error);
+            $("#time").html(`<option value="">Terjadi kesalahan saat memuat waktu</option>`);
+            
+            // Tampilkan notifikasi error
+            if(xhr.responseJSON && xhr.responseJSON.message) {
+              showNotification('error', xhr.responseJSON.message);
             }
           }
         });
       } else {
-        $("#time").html(`<option value="">Pilih Waktu</option>`);
+        $("#time").html(`<option value="">Pilih Ruangan dan Tanggal terlebih dahulu</option>`);
       }
     }
 
@@ -144,6 +209,33 @@
 
     $("#room_id").on('change', function() {
       getTimes();
+    });
+
+    // Fungsi untuk menampilkan notifikasi
+    function showNotification(type, message) {
+      // menggunakan library notifikasi seperti Toastr
+      // Atau tampilkan alert sederhana
+      alert(message);
+    }
+
+    // Validasi form sebelum submit
+    $("#form-booking").submit(function(e) {
+      var timeValue = $("#time").val();
+      var timeOption = $("#time option:selected");
+      
+      // Cek jika waktu yang dipilih disabled (sudah dibooking)
+      if (timeOption.is(':disabled')) {
+        e.preventDefault();
+        alert('Waktu yang dipilih sudah dibooking. Silakan pilih waktu lain.');
+        return false;
+      }
+      
+      // Cek jika waktu belum dipilih
+      if (!timeValue) {
+        e.preventDefault();
+        alert('Silakan pilih waktu booking.');
+        return false;
+      }
     });
   </script>
 @endpush

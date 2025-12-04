@@ -20,10 +20,10 @@
     @slot('table_id', 'booking-list-table')
     @slot('table_header')
       <tr>
-        <th>#</th>
+        <th>No</th>
         <!-- <th>Foto</th> -->
         <th>Ruangan</th>
-        <th>User</th>
+        <th>Nama</th>
         <th>Tanggal</th>
         <th>Waktu Mulai</th>
         <th>Waktu Selesai</th>
@@ -43,21 +43,24 @@ $(document).ready(function() {
     processing: true,
     serverSide: false,
     ajax: '{{ route('booking-list.json') }}',
+    order: [],
     columnDefs: [
       {
+        targets: [3],
+        type: 'date',
+        orderData: [3, 4]
+      },
+      {
         targets: [4],
-        orderData: [4, 5]
+        orderData: [4, 3]
       },
       {
-        targets: [5],
-        orderData: [5, 4]
-      },
-      {
-        targets: 7,
+        targets: 6,
         render: $.fn.dataTable.render.ellipsis(20, true)
       },
     ],
-    order: [[4, 'asc'], [5, 'asc']], // Urut berdasar tanggal & jam mulai
+
+    // order: [[7, 'asc'], [3, 'asc'], [4, 'asc']], // Urut berdasar tanggal & jam mulai
     columns: [
       {
         data: 'index',
@@ -114,7 +117,22 @@ $(document).ready(function() {
         }
       },
       { data: 'user', orderable: false },
-      { data: 'date' },
+      { data: 'date',
+        render: function (data, type, row) {
+          //Format tanggal dengan nama hari Indonesia
+          if (data) {
+            const dateObj = new Date(data + 'T00:00:00');
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const dayName = days[dateObj.getDay()];
+
+            if (type === 'display') {
+              return `${data} - ${dayName}`;
+            }
+            //untuk sorting dan filtering, kembalikan data asli
+            return data || '-';
+          }
+        }
+       },
       { data: 'start_time' },
       { data: 'end_time' },
       { data: 'purpose' },
@@ -126,12 +144,13 @@ $(document).ready(function() {
             'DISETUJUI': 'primary',
             'DIGUNAKAN': 'primary',
             'DITOLAK': 'danger',
-            'EXPIRED': 'warning',
+            'EXPIRED': 'dark',
             'BATAL': 'warning',
             'SELESAI': 'success',
-            'BOOKING_BY_LAB': 'warning',
+            'BOOKING_BY_LAB': 'info',
           }[data] || 'secondary';
-          return `<span class="badge badge-${badgeClass}">${data}</span>`;
+          const textClass = (data === 'BATAL' || data === 'BATAL') ? 'text-dark' : '';
+          return `<span class="badge badge-${badgeClass} ${textClass}">${data}</span>`;
         }
       },
     ]
