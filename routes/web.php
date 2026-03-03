@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\AlatTestController as AdminAlatTestController;
 use App\Http\Controllers\Admin\AlatTestBookingListController;
 use App\Http\Controllers\Admin\AlatTestInoutController;
 use App\Http\Controllers\Admin\GroupAlatTestController;
+use App\Http\Controllers\Admin\PlottingController;
 use App\Http\Controllers\ChangePassController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
@@ -200,13 +201,23 @@ Route::prefix('admin')
                 Route::delete('{id}/delete', [AlatTestInoutController::class, 'destroy'])->name('destroy');
             });
         });
-        
         Route::resource('alat-test', AdminAlatTestController::class)->names('alat-test');
 
         Route::resources([
             'user'          => UserController::class,
             'room'          => RoomController::class,
         ]);
+        // ===== PLOTTING ROUTES =====
+        Route::resource('plotting', App\Http\Controllers\Admin\PlottingController::class);
+        
+        Route::prefix('plotting')->name('plotting.')->group(function () {
+            // PERBAIKAN: Pisahkan route dengan dan tanpa parameter
+            Route::get('{id}/import', [App\Http\Controllers\Admin\PlottingController::class, 'importForm'])->name('import');
+            Route::post('{id}/import', [App\Http\Controllers\Admin\PlottingController::class, 'importExcel'])->name('importExcel');
+            Route::get('template/download', [App\Http\Controllers\Admin\PlottingController::class, 'downloadTemplate'])->name('template');
+            Route::get('{id}/preview', [App\Http\Controllers\Admin\PlottingController::class, 'preview'])->name('preview');
+            Route::get('{id}/activate', [App\Http\Controllers\Admin\PlottingController::class, 'activate'])->name('activate');
+        });
     });
 
 // Route::prefix('alat-test-booking')->middleware('auth')->group(function () {

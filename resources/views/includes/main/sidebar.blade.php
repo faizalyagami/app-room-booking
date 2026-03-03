@@ -61,6 +61,13 @@
             <i class="fas fa-door-open"></i> <span>Ruangan</span>
           </a>
         </li>
+        
+        <li class="{{ request()->is('admin/plotting*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('plotting.index') }}">
+                <i class="fas fa-calendar-alt"></i> <span>Plotting Ruangan</span>
+            </a>
+        </li>
+
         <li class="{{ request()->is('admin/alat-test/group*') ? 'active' : '' }}">
           <a class="nav-link" href="{{ route('alat-test.group.index') }}">
             <i class="fas fa-toolbox"></i><span>Group Alat Test</span>
