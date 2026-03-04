@@ -88,7 +88,6 @@ class PlottingController extends Controller
             
             DB::commit();
 
-            // PERBAIKAN 1: dari 'plotting.import-form' ke 'plotting.import'
             return redirect()->route('plotting.import', $plotting->id)
                 ->with('success', 'Plotting berhasil dibuat. Silahkan upload file excel.');
 
@@ -117,15 +116,20 @@ class PlottingController extends Controller
         ]);
 
         $plotting = Plotting::findOrFail($id);
-        $labUser = User::where('role', 'laboratorium')->first();
+        $labUser = User::where('role', 'ADMIN')->first();
 
         if (!$labUser) {
-            return back()->with('error', 'User laboratorium tidak ditemukan');
+            return back()->with('error', 'User admin tidak ditemukan');
         }
 
         DB::beginTransaction();
 
         try {
+            // HAPUS SEMUA DATA LAMA UNTUK PERIODE INI
+            BookingList::where('status', 'BOOKING_BY_LAB')
+                ->whereBetween('date', [$plotting->tanggal_mulai, $plotting->tanggal_selesai])
+                ->delete();
+
             $import = new PlottingImport($plotting, $labUser->id);
             Excel::import($import, $request->file('file'));
 
@@ -148,10 +152,9 @@ class PlottingController extends Controller
 
             DB::commit();
 
-            // PERBAIKAN 2: tambah spasi setelah 'import'
             $rowCount = $import->getRowCount();
             return redirect()->route('plotting.index')
-                ->with('success', 'Berhasil import ' . $rowCount . ' jadwal plotting');
+                ->with('success', 'Berhasil import ' . $rowCount . ' jadwal plotting (data lama dihapus)');
 
         } catch (\Exception $e) {
             DB::rollBack();
