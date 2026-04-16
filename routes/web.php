@@ -54,12 +54,11 @@ Route::prefix('/')
     ->middleware(['auth', 'which.home'])
     ->name('user.dashboard');
 
-Route::group(['namespace' => 'App\Http\Controllers'] , function() {
+Route::group(['namespace' => 'App\Http\Controllers'], function () {
 
-    Route::group(['prefix' => 'day-times', 'as' => 'day-times.'], function() {
+    Route::group(['prefix' => 'day-times', 'as' => 'day-times.'], function () {
         Route::get('get-times', 'DayTimeController@getTimes')->name('get-times');
     });
-    
 });
 
 Route::get('/day-times/get-times', [App\Http\Controllers\DayTimeController::class, 'getTimes'])
@@ -134,7 +133,7 @@ Route::prefix('admin')
     ->group(function () {
         Route::get('/', [AdminDashboardController::class, 'index'])
             ->name('admin.dashboard');
-        
+
         Route::get('user/download-template', [UserController::class, 'downloadTemplate'])->name('user.downloadTemplate');
         Route::get('user/import', [UserController::class, 'showImportForm'])->name('user.import');
         Route::post('user/import', [UserController::class, 'importExcel'])->name('user.importExcel');
@@ -150,6 +149,36 @@ Route::prefix('admin')
 
         Route::get('/room/json', [RoomController::class, 'json'])
             ->name('room.json');
+
+        Route::get('/room-plot', [App\Http\Controllers\Admin\RoomPlotController::class, 'index'])
+            ->name('admin.room-plot.index');
+        Route::get('/room-plot/json', [App\Http\Controllers\Admin\RoomPlotController::class, 'json'])
+            ->name('admin.room-plot.json');
+        Route::get('/room-plot/create', [App\Http\Controllers\Admin\RoomPlotController::class, 'create'])
+            ->name('admin.room-plot.create');
+        Route::post('/room-plot', [App\Http\Controllers\Admin\RoomPlotController::class, 'store'])
+            ->name('admin.room-plot.store');
+        Route::get('/room-plot/{id}/edit', [App\Http\Controllers\Admin\RoomPlotController::class, 'edit'])
+            ->name('admin.room-plot.edit');
+        Route::put('/room-plot/{id}', [App\Http\Controllers\Admin\RoomPlotController::class, 'update'])
+            ->name('admin.room-plot.update');
+        Route::delete('/room-plot/{id}', [App\Http\Controllers\Admin\RoomPlotController::class, 'destroy'])
+            ->name('admin.room-plot.destroy');
+
+        Route::get('/info-image', [App\Http\Controllers\Admin\InfoImageController::class, 'index'])
+            ->name('admin.info-image.index');
+        Route::get('/info-image/json', [App\Http\Controllers\Admin\InfoImageController::class, 'json'])
+            ->name('admin.info-image.json');
+        Route::get('/info-image/create', [App\Http\Controllers\Admin\InfoImageController::class, 'create'])
+            ->name('admin.info-image.create');
+        Route::post('/info-image', [App\Http\Controllers\Admin\InfoImageController::class, 'store'])
+            ->name('admin.info-image.store');
+        Route::get('/info-image/{id}/edit', [App\Http\Controllers\Admin\InfoImageController::class, 'edit'])
+            ->name('admin.info-image.edit');
+        Route::put('/info-image/{id}', [App\Http\Controllers\Admin\InfoImageController::class, 'update'])
+            ->name('admin.info-image.update');
+        Route::delete('/info-image/{id}', [App\Http\Controllers\Admin\InfoImageController::class, 'destroy'])
+            ->name('admin.info-image.destroy');
 
         Route::get('/booking-list/json', [BookingListController::class, 'json'])
             ->name('booking-list.json');
@@ -173,7 +202,7 @@ Route::prefix('admin')
             ->name('alat-test-booking-list.update');
 
         Route::get('/alat-test/json', [AdminAlatTestController::class, 'json'])->name('alat-test.json');
-        
+
         Route::prefix('alat-test')->as('alat-test.')->group(function () {
             Route::get('{id}/logs', [AdminAlatTestController::class, 'logs'])->name('logs');
 
@@ -209,7 +238,7 @@ Route::prefix('admin')
         ]);
         // ===== PLOTTING ROUTES =====
         Route::resource('plotting', App\Http\Controllers\Admin\PlottingController::class);
-        
+
         Route::prefix('plotting')->name('plotting.')->group(function () {
             // PERBAIKAN: Pisahkan route dengan dan tanpa parameter
             Route::get('{id}/import', [App\Http\Controllers\Admin\PlottingController::class, 'importForm'])->name('import');
