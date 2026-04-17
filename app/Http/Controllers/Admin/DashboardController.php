@@ -8,6 +8,7 @@ use App\Models\BookingAlat;
 use Illuminate\Http\Request;
 
 use App\Models\BookingList;
+use App\Models\InfoImage;
 use App\Models\Room;
 use App\Models\User;
 
@@ -34,6 +35,16 @@ class DashboardController extends Controller
         $alat_test              = AlatTest::all()->count();
         $user                   = User::where('ROLE', 'USER')->count();
 
+        $infoImages = InfoImage::where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->filter(function ($item) {
+                return $item->isValid();
+            });
+
+        $info_images_count = $infoImages->count();
+
         return view('pages.admin.dashboard', [
             'booking_list_all'          => $booking_list_all,
             'booking_list_pending'      => $booking_list_pending,
@@ -52,6 +63,8 @@ class DashboardController extends Controller
             'room'                      => $room,
             'alat_test'                 => $alat_test,
             'user'                      => $user,
+            'infoImages'                => $infoImages,
+            'info_images_count'         => $info_images_count,
         ]);
     }
 }

@@ -19,6 +19,10 @@ class CreateRoomsTable extends Migration
             $table->string('description', 100)->nullable();
             $table->integer('capacity')->nullable();
             $table->string('photo')->nullable();
+            $table->string('plot_image')->nullable();
+            $table->text('plot_description')->nullable();
+            $table->date('plot_valid_from')->nullable();
+            $table->date('plot_valid_until')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });
@@ -31,6 +35,8 @@ class CreateRoomsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('rooms');
+        Schema::table('rooms', function (Blueprint $table) {
+            $table->dropColumn(['plot_image', 'plot_description', 'plot_valid_from', 'plot_valid_until']);
+        });
     }
 }
