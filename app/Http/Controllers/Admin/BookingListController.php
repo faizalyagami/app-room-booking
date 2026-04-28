@@ -1,22 +1,59 @@
-<?php 
-namespace App\Http\Controllers\Admin; 
-use App\Http\Controllers\Controller; 
-use Illuminate\Http\Request; 
-use Illuminate\Support\Facades\Auth; 
-use Illuminate\Support\Facades\URL; 
-use App\Models\BookingList; 
-use App\Models\User; 
-use App\Jobs\SendEmail; 
-use DataTables; 
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL;
+use App\Models\BookingList;
+use App\Models\Room;
+use App\Models\User;
+use App\Jobs\SendEmail;
+use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 
-class BookingListController extends Controller { 
-    public function json() { 
+class BookingListController extends Controller
+{
+
+    public function json(Request $request)
+    {
         $this->updateBookingStatus();
 
-        $data = BookingList::with(['room', 'user'])
-        ->orderByRaw("
+        $query = BookingList::with(['room', 'user']);
+
+        // ===== FILTER BERDASARKAN HARI =====
+        if ($request->filled('filter_day')) {
+            $dayMap = [
+                'Senin' => 1,
+                'Selasa' => 2,
+                'Rabu' => 3,
+                'Kamis' => 4,
+                'Jumat' => 5,
+                'Sabtu' => 6,
+                'Minggu' => 0,
+            ];
+            $dayNumber = $dayMap[$request->filter_day] ?? null;
+            if ($dayNumber !== null) {
+                $query->whereRaw('DAYOFWEEK(date) = ?', [$dayNumber + 1]); // MySQL DAYOFWEEK: 1=Minggu, 2=Senin, dll
+            }
+        }
+
+        // ===== FILTER BERDASARKAN RUANGAN =====
+        if ($request->filled('filter_room')) {
+            $query->whereHas('room', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->filter_room . '%');
+            });
+        }
+
+        // ===== FILTER BERDASARKAN TANGGAL =====
+        if ($request->filled('filter_date')) {
+            $query->whereDate('date', $request->filter_date);
+        }
+
+        // ===== SORTING & ORDERING =====
+        $query->orderByRaw("
             CASE 
                 WHEN status = 'PENDING' THEN 1
                 WHEN status = 'DITOLAK' THEN 2
@@ -27,32 +64,59 @@ class BookingListController extends Controller {
                 WHEN status = 'BOOKING_BY_LAB' THEN 7
                 ELSE 8
             END
-            ")
-        ->orderBy('date', 'asc')
-        ->orderBy('start_time', 'asc')
-        ->get(); 
+        ")
+            ->orderBy('date', 'asc')
+            ->orderBy('start_time', 'asc');
+
+        // ===== SERVER-SIDE DATATABLES =====
+        if ($request->ajax()) {
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('room', function ($item) {
+                    return $item->room->name ?? '-';
+                })
+                ->addColumn('user', function ($item) {
+                    return $item->user->name ?? '-';
+                })
+                ->addColumn('date_display', function ($item) {
+                    $date = Carbon::parse($item->date);
+                    $day = $this->getIndonesianDay($date->dayOfWeek);
+                    return $item->date . ' - ' . $day;
+                })
+                ->addColumn('purpose', function ($item) {
+                    return $item->purpose;
+                })
+                ->addColumn('status', function ($item) {
+                    return $item->status;
+                })
+                ->make(true);
+        }
+
+        // Fallback untuk non-ajax (jika diperlukan)
+        $data = $query->get();
         $result = $data->map(function ($item, $index) {
             $date = Carbon::parse($item->date);
             $day = $this->getIndonesianDay($date->dayOfWeek);
-            $formattedDate = $item->date . '-' . $day; 
+            $formattedDate = $item->date . ' - ' . $day;
             return [
-                 'index' => $index + 1, 
-                 'id' => $item->id, 
-                 'photo' => $item->room->photo ?? '-', 
-                 'room' => $item->room->name ?? '-', 
-                 'user' => $item->user->name ?? '-', 
-                 'date' => $item->date,
-                 'date_display' => $formattedDate,
-                 'start_time' => $item->start_time, 
-                 'end_time' => $item->end_time, 
-                 'purpose' => $item->purpose, 
-                 'status' => $item->status,
-                ]; 
-            }); 
-                return response()->json([ 'data' => $result ]); 
-    } /** * Display a listing of the resource. * * @return \Illuminate\Http\Response */
+                'index' => $index + 1,
+                'id' => $item->id,
+                'photo' => $item->room->photo ?? '-',
+                'room' => $item->room->name ?? '-',
+                'user' => $item->user->name ?? '-',
+                'date' => $item->date,
+                'date_display' => $formattedDate,
+                'start_time' => $item->start_time,
+                'end_time' => $item->end_time,
+                'purpose' => $item->purpose,
+                'status' => $item->status,
+            ];
+        });
+        return response()->json(['data' => $result]);
+    }
 
-    private function updateBookingStatus() {
+    private function updateBookingStatus()
+    {
         $now = Carbon::now();
         $today = $now->toDateString();
         $currentTime = $now->toTimeString();
@@ -66,29 +130,28 @@ class BookingListController extends Controller {
                 ->where('status', 'DISETUJUI')
                 ->update(['status' => 'DIGUNAKAN']);
             // 2. Booking sudah selesai (DISETUJUI/DIGUNAKAN -> SELESAI)
-            // Selesai untuk booking hari ini yang sudah lewat end_time
             $todayCompleted = BookingList::where('date', $today)
                 ->where('end_time', '<', $currentTime)
                 ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN'])
                 ->update(['status' => 'SELESAI']);
 
-            // Selesai untuk booking di tanggal sebelumnya
             $pastCompleted = BookingList::where('date', '<', $today)
                 ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN'])
                 ->update(['status' => 'SELESAI']);
 
-            // 3. HANYA booking yang dibuat lebih dari 1 hari dan masih PENDING -> EXPIRED
+            // 3. PENDING lebih dari 1 hari -> EXPIRED
             $unapprovedExpired = BookingList::where('status', 'PENDING')
                 ->where('created_at', '<=', $oneDayAgo)
                 ->update(['status' => 'EXPIRED']);
-            
+
             \Log::info("Auto-update status: {$ongoingBookings} ongoing, {$todayCompleted} today completed, {$pastCompleted} past completed, {$unapprovedExpired} unapproved expired (1 day)");
-            } catch (\Exception $e) {
-                \Log::error('Error updating booking status: ' . $e->getMessage());
-            }
+        } catch (\Exception $e) {
+            \Log::error('Error updating booking status: ' . $e->getMessage());
+        }
     }
 
-    private function getIndonesianDay($dayOfWeek) {
+    private function getIndonesianDay($dayOfWeek)
+    {
         $days = [
             0 => 'Minggu',
             1 => 'Senin',
@@ -100,15 +163,22 @@ class BookingListController extends Controller {
         ];
         return $days[$dayOfWeek] ?? '-';
     }
-    public function index() { return view('pages.admin.booking-list.index'); 
-    } 
-    public function update($id, $value) { 
-        $item = BookingList::with(['room', 'user'])->findOrFail($id); 
-        $today = Carbon::today(); 
-        $now = Carbon::now(); 
-        $user_name = $item->user->name; 
-        $user_email = $item->user->email; 
-        $admin_name = Auth::user()->name; 
+
+    public function index()
+    {
+        // Ambil daftar ruangan untuk dropdown filter
+        $rooms = Room::orderBy('name')->get();
+        return view('pages.admin.booking-list.index', compact('rooms'));
+    }
+
+    public function update($id, $value)
+    {
+        $item = BookingList::with(['room', 'user'])->findOrFail($id);
+        $today = Carbon::today();
+        $now = Carbon::now();
+        $user_name = $item->user->name;
+        $user_email = $item->user->email;
+        $admin_name = Auth::user()->name;
         $admin_email = Auth::user()->email;
 
         //CEK APAKAH BOOKING SUDAH EXPIRED/SELESAI (tidak bisa di-update)
@@ -126,42 +196,54 @@ class BookingListController extends Controller {
         }
 
         // tentukan status 
-        if ($value == 1) { 
-            $data['status'] = 'DISETUJUI'; 
-        } elseif ($value == 0) { $data['status'] = 'DITOLAK'; 
-        } else { session()->flash('alert-failed', 'Perintah tidak dimengerti'); 
-            return redirect()->route('booking-list.index'); 
-        } 
+        if ($value == 1) {
+            $data['status'] = 'DISETUJUI';
+        } elseif ($value == 0) {
+            $data['status'] = 'DITOLAK';
+        } else {
+            session()->flash('alert-failed', 'Perintah tidak dimengerti');
+            return redirect()->route('booking-list.index');
+        }
+
         // validasi waktu booking 
-        $bookingStart = Carbon::parse($item->date.' '.$item->start_time); 
-        if (!$bookingStart->isFuture()) { session()->flash('alert-failed', 'Permintaan booking itu tidak lagi bisa diupdate'); 
-            return redirect()->route('booking-list.index'); 
-        } 
+        $bookingStart = Carbon::parse($item->date . ' ' . $item->start_time);
+        if (!$bookingStart->isFuture()) {
+            session()->flash('alert-failed', 'Permintaan booking itu tidak lagi bisa diupdate');
+            return redirect()->route('booking-list.index');
+        }
+
         // cek overlap hanya jika disetujui 
-        $isOverlap = false; 
-        if ($data['status'] == 'DISETUJUI') { 
-            $isOverlap = BookingList::where('date', $item->date) 
-            ->where('room_id', $item->room_id)
-            ->where('id', '!=', $item->id)
-            ->whereIn('status', ['DISETUJUI', 'BOOKING_BY_LAB']) 
-            ->where(function ($q) use ($item) { 
-                $q->whereBetween('start_time', [$item->start_time, $item->end_time]) 
-                ->orWhereBetween('end_time', [$item->start_time, $item->end_time]) 
-                ->orWhere(function ($q2) use ($item) { 
-                    $q2->where('start_time', '<=', $item->start_time) 
-                    ->where('end_time', '>=', $item->end_time); 
-            }); 
-        }) ->exists(); 
-        } if ($data['status'] == 'DISETUJUI' && $isOverlap) { session()->flash('alert-failed', 'Ruangan '.$item->room->name.' di waktu itu sudah dibooking'); 
-                return redirect()->route('booking-list.index'); 
-            } 
+        $isOverlap = false;
+        if ($data['status'] == 'DISETUJUI') {
+            $isOverlap = BookingList::where('date', $item->date)
+                ->where('room_id', $item->room_id)
+                ->where('id', '!=', $item->id)
+                ->whereIn('status', ['DISETUJUI', 'BOOKING_BY_LAB'])
+                ->where(function ($q) use ($item) {
+                    $q->whereBetween('start_time', [$item->start_time, $item->end_time])
+                        ->orWhereBetween('end_time', [$item->start_time, $item->end_time])
+                        ->orWhere(function ($q2) use ($item) {
+                            $q2->where('start_time', '<=', $item->start_time)
+                                ->where('end_time', '>=', $item->end_time);
+                        });
+                })->exists();
+        }
+
+        if ($data['status'] == 'DISETUJUI' && $isOverlap) {
+            session()->flash('alert-failed', 'Ruangan ' . $item->room->name . ' di waktu itu sudah dibooking');
+            return redirect()->route('booking-list.index');
+        }
+
         // update data 
-        if ($item->update($data)) { 
-            session()->flash('alert-success', 'Booking Ruang '.$item->room->name.' sekarang '.$data['status']); 
-            // daftar penerima email 
-            $recipients = [ [ 'role' => 'USER', 'email' => $user_email, 'name' => $user_name, 'url' => URL::to('/my-booking-list'), ], [ 'role' => 'ADMIN', 'email' => $admin_email, 'name' => $admin_name, 'url' => URL::to('/admin/booking-list'), ], ];
-            // kirim email ke user & admin 
-            foreach ($recipients as $recipient) { 
+        if ($item->update($data)) {
+            session()->flash('alert-success', 'Booking Ruang ' . $item->room->name . ' sekarang ' . $data['status']);
+
+            $recipients = [
+                ['role' => 'USER', 'email' => $user_email, 'name' => $user_name, 'url' => URL::to('/my-booking-list'),],
+                ['role' => 'ADMIN', 'email' => $admin_email, 'name' => $admin_name, 'url' => URL::to('/admin/booking-list'),],
+            ];
+
+            foreach ($recipients as $recipient) {
                 try {
                     Mail::to($recipient['email'])->send(new \App\Mail\BookingMail(
                         $user_name,
@@ -175,13 +257,14 @@ class BookingListController extends Controller {
                         $recipient['url'],
                         $data['status']
                     ));
-                        \Log::info("Email berhasil dikirim ke: " . $recipient['email']);
-                    } catch (\Exception $e) {
-                        \Log::error('Gagal mengirim email ke ' . $recipient['email'] . ": " . $e->getMessage());
-                    }
-                 }
-                } else { 
-                    session()->flash('alert-failed', 'Booking Ruang '.$item->room->name.' gagal diupdate'); 
-                } return redirect()->route('booking-list.index');
+                    \Log::info("Email berhasil dikirim ke: " . $recipient['email']);
+                } catch (\Exception $e) {
+                    \Log::error('Gagal mengirim email ke ' . $recipient['email'] . ": " . $e->getMessage());
+                }
             }
-         }
+        } else {
+            session()->flash('alert-failed', 'Booking Ruang ' . $item->room->name . ' gagal diupdate');
+        }
+        return redirect()->route('booking-list.index');
+    }
+}

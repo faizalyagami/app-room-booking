@@ -121,87 +121,87 @@
     window.getTimes = function () {
       var date = $("#date").val();
       var room = $("#room_id").val();
-      var ajaxurl = "{{ route('day-times.get-times') }}"; // Gunakan route name
-
-      // Clear previous options
-      $("#time").html(`<option value="">Memuat waktu...</option>`);
+      var ajaxurl = "{{ route('day-times.get-times') }}";
 
       if(date != "" && room != "") {
-        $.ajax({
-          url: ajaxurl, 
-          dataType: 'JSON', 
-          type: 'GET', 
-          data: {
-            date: date, 
-            room: room
-          }, 
-          success: function(response) {
-            if(response.status == 'success') {
-              var days = response.data;
-              let html = `<option value="">Pilih Waktu</option>`;
+          $.ajax({
+              url: ajaxurl, 
+              dataType: 'JSON', 
+              type: 'GET', 
+              data: {
+                  date: date, 
+                  room: room
+              }, 
+              success: function(response) {
+                  if(response.status == 'success') {
+                      var days = response.data;
+                      let html = `<option value="">Pilih Waktu</option>`;
 
-              if(days != null && days.times.length > 0) {
-                let bookings = days.bookings || [];
-                
-                // Buat mapping booked slots dengan status
-                let bookedSlots = {};
-                bookings.forEach(function(booking) {
-                  bookedSlots[booking.start_time] = booking.status;
-                });
+                      if(days != null && days.times.length > 0) {
+                          let bookings = days.bookings || [];
+                          let now = new Date();
+                          let selectedDate = new Date(date);
+                          
+                          let bookedSlots = {};
+                          bookings.forEach(function(booking) {
+                              bookedSlots[booking.start_time] = booking.status;
+                          });
 
-                days.times.forEach(function(item) {
-                  let start = item.start_time.substring(0, item.start_time.lastIndexOf(':'));
-                  let end = item.end_time.substring(0, item.end_time.lastIndexOf(':'));
-                  let startTimeFull = item.start_time;
-                  let bookedStatus = bookedSlots[startTimeFull];
-                  let isDisabled = false;
-                  let label = '';
-                  let title = '';
+                          days.times.forEach(function(item) {
+                              let start = item.start_time.substring(0, item.start_time.lastIndexOf(':'));
+                              let end = item.end_time.substring(0, item.end_time.lastIndexOf(':'));
+                              let startTimeFull = item.start_time;
+                              
+                              // 🔥 CEK APAKAH WAKTU SUDAH LEWAT
+                              let startDateTime = new Date(date + ' ' + start);
+                              let isTimePassed = startDateTime < now;
+                              
+                              let bookedStatus = bookedSlots[startTimeFull];
+                              let isDisabled = false;
+                              let label = '';
+                              let title = '';
 
-                  if (bookedStatus) {
-                    isDisabled = true;
-                    // Tentukan label dan warna berdasarkan status
-                    if (bookedStatus === 'BOOKING_BY_LAB') {
-                      label = ' (Booked by Lab)';
-                      title = 'Slot waktu ini sudah dibooking oleh laboratorium';
-                    } else {
-                      label = ' (Booked)';
-                      title = 'Slot waktu ini sudah dibooking';
-                    }
+                              if (isTimePassed) {
+                                  isDisabled = true;
+                                  label = ' (Waktu Lewat)';
+                                  title = 'Waktu ini sudah lewat, tidak bisa dipilih';
+                              } else if (bookedStatus) {
+                                  isDisabled = true;
+                                  if (bookedStatus === 'BOOKING_BY_LAB') {
+                                      label = ' (Booked by Lab)';
+                                      title = 'Slot waktu ini sudah dibooking oleh laboratorium';
+                                  } else {
+                                      label = ' (Booked)';
+                                      title = 'Slot waktu ini sudah dibooking';
+                                  }
+                              }
+
+                              html += `
+                                  <option ${isDisabled ? 'disabled style="color: #6c757d; background-color: #e9ecef;"' : ''} 
+                                          value="${start} - ${end}"
+                                          title="${title}">
+                                      ${start} - ${end}${label}
+                                  </option>
+                              `;
+                          });
+                      } else {
+                          html = `<option value="">Tidak ada waktu tersedia</option>`;
+                      }
+
+                      $("#time").html(html);
+                  } else {
+                      $("#time").html(`<option value="">${response.message || 'Gagal memuat waktu'}</option>`);
                   }
-
-                  html += `
-                    <option ${isDisabled ? 'disabled style="color: #6c757d; background-color: #e9ecef; cursor: not-allowed;"' : ''} 
-                            value="${start} - ${end}"
-                            title="${title}">
-                      ${start} - ${end}${label}
-                    </option>
-                  `;
-                });
-              } else {
-                html = `<option value="">Tidak ada waktu tersedia</option>`;
+              },
+              error: function(xhr, status, error) {
+                  console.error("Error fetching times:", error);
+                  $("#time").html(`<option value="">Terjadi kesalahan saat memuat waktu</option>`);
               }
-
-              $("#time").html(html);
-            } else {
-              $("#time").html(`<option value="">${response.message || 'Gagal memuat waktu'}</option>`);
-              console.error('Error from server:', response.message);
-            }
-          },
-          error: function(xhr, status, error) {
-            console.error("Error fetching times:", error);
-            $("#time").html(`<option value="">Terjadi kesalahan saat memuat waktu</option>`);
-            
-            // Tampilkan notifikasi error
-            if(xhr.responseJSON && xhr.responseJSON.message) {
-              showNotification('error', xhr.responseJSON.message);
-            }
-          }
-        });
+          });
       } else {
-        $("#time").html(`<option value="">Pilih Ruangan dan Tanggal terlebih dahulu</option>`);
+          $("#time").html(`<option value="">Pilih Ruangan dan Tanggal terlebih dahulu</option>`);
       }
-    }
+  }
 
     $("#date").on('change', function() {
       getTimes();
