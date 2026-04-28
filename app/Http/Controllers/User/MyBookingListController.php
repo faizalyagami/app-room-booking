@@ -18,7 +18,8 @@ use App\Jobs\SendEmail;
 use App\Http\Requests\User\MyBookingListRequest;
 use App\Models\DayTime;
 use Carbon\Carbon;
-use DataTables;
+// use DataTables;
+use Yajra\DataTables\Facades\DataTables;
 
 class MyBookingListController extends Controller
 {
@@ -97,11 +98,26 @@ class MyBookingListController extends Controller
         $bookingDateTimeEnd = Carbon::parse($request->date . ' ' . $time[1]);
         $now = Carbon::now();
 
+        // Cek APAKAH WAKTU MULAI SUDAH LEWAT
+        if ($bookingDateTimeStart->lessThanOrEqualTo($now)) {
+        $request->session()->flash('alert-failed', 'Tidak bisa booking untuk waktu yang sudah lewat. Silakan pilih jadwal yang akan datang.');
+        return redirect()->route('my-booking-list.create');
+        }
+
+        // Cek APAKAH WAKTU SELESAI SUDAH LEWAT
         if ($bookingDateTimeEnd->lessThanOrEqualTo($now)) {
             $request->session()->flash('alert-failed', 'Tanggal dan waktu yang dipilih sudah terlewat. Silahkan pilih waktu yang masih tersedia.');
             return redirect()->route('my-booking-list.create');
         }
 
+        // Cek APAKAH TANGGAL BOOKING KURANG DARI HARI INI
+        $today = Carbon::today();
+        $bookingDate = Carbon::parse($request->date);
+        
+        if ($bookingDate->lessThan($today)) {
+            $request->session()->flash('alert-failed', 'Tidak bisa booking untuk tanggal yang sudah lewat.');
+            return redirect()->route('my-booking-list.create');
+        }
         $message = new BookingList();
         $message->room_id = $request->room_id;
         $message->user_id = auth()->user()->id;
