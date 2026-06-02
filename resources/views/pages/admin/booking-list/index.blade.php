@@ -55,6 +55,21 @@ Berikut ini adalah daftar seluruh booking dari setiap user.
           <input type="date" id="filter-date" class="form-control" placeholder="Pilih Tanggal">
         </div>
       </div>
+      <div class="col-md-4">
+        <div class="form-group">
+          <label>Filter Berdasarkan Status</label>
+          <select name="" id="filter-status" class="form-control">
+            <option value="">-- Semua Status --</option>
+            <option value="PENDING">PENDING</option>
+            <option value="DISETUJUI">DISETUJUI</option>
+            <option value="DIGUNAKAN">DIGUNAKAN</option>
+            <option value="DITOLAK">DITOLAK</option>
+            <option value="SELESAI">SELESAI</option>
+            <option value="EXPIRED">EXPIRED</option>
+            <option value="BOOKING_BY_LAB">BOOKING_BY_LAB</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div class="row">
       <div class="col-md-12">
@@ -98,6 +113,7 @@ Berikut ini adalah daftar seluruh booking dari setiap user.
           d.filter_day = $('#filter-day').val();
           d.filter_room = $('#filter-room').val();
           d.filter_date = $('#filter-date').val();
+          d.filter_status = $('#filter-status').val();
         }
       },
       order: [
@@ -176,14 +192,14 @@ Berikut ini adalah daftar seluruh booking dari setiap user.
           data: 'status',
           render: function(data) {
             const badgeClass = {
-              'PENDING': 'info',
+              'PENDING': 'warning',
               'DISETUJUI': 'primary',
-              'DIGUNAKAN': 'primary',
+              'DIGUNAKAN': 'info',
               'DITOLAK': 'danger',
               'EXPIRED': 'dark',
-              'BATAL': 'warning',
+              'BATAL': 'secondary',
               'SELESAI': 'success',
-              'BOOKING_BY_LAB': 'info',
+              'BOOKING_BY_LAB': 'warning',
             } [data] || 'secondary';
             return `<span class="badge badge-${badgeClass}">${data}</span>`;
           }
@@ -201,6 +217,7 @@ Berikut ini adalah daftar seluruh booking dari setiap user.
       $('#filter-day').val('');
       $('#filter-room').val('');
       $('#filter-date').val('');
+      $('#filter-status').val('');
       table.ajax.reload();
     });
 
