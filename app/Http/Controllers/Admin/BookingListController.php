@@ -52,6 +52,10 @@ class BookingListController extends Controller
             $query->whereDate('date', $request->filter_date);
         }
 
+        if ($request->filled('filter_status')) {
+            $query->whereIn('status', (array) $request->filter_status);
+        }
+
         // ===== SORTING & ORDERING =====
         $query->orderByRaw("
             CASE 
