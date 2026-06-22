@@ -126,6 +126,11 @@ Route::prefix('/')
 
         Route::put('/my-booking-alat-test-list/{id}/cancel', [AlatTestBookingController::class, 'cancel'])
             ->name('my-booking-alat-test-list.cancel');
+
+        Route::get('/calendar', [App\Http\Controllers\User\CalendarController::class, 'index'])
+            ->name('user.calendar.index');
+        Route::get('/calendar/booking/{id}', [App\Http\Controllers\User\CalendarController::class, 'getBookingDetail'])
+            ->name('user.calendar.booking.detail');
     });
 
 Route::prefix('admin')
@@ -180,6 +185,11 @@ Route::prefix('admin')
         Route::delete('/info-image/{id}', [App\Http\Controllers\Admin\InfoImageController::class, 'destroy'])
             ->name('admin.info-image.destroy');
 
+        Route::get('/calendar', [App\Http\Controllers\Admin\CalendarController::class, 'index'])
+            ->name('admin.calendar.index');
+        Route::get('/calendar/booking/{id}', [App\Http\Controllers\Admin\CalendarController::class, 'getBookingDetail'])
+            ->name('admin.calendar.booking.detail');
+
         Route::get('/booking-list/json', [BookingListController::class, 'json'])
             ->name('booking-list.json');
 
@@ -188,6 +198,9 @@ Route::prefix('admin')
 
         Route::put('/booking-list/{id}/update/{value}', [BookingListController::class, 'update'])
             ->name('booking-list.update');
+
+        Route::post('/booking-list/delete-multiple', [BookingListController::class, 'deleteMultiple'])
+            ->name('booking-list.delete-multiple');
 
         Route::get('/alat-test-booking-list/json', [AlatTestBookingListController::class, 'json'])
             ->name('alat-test-booking-list.json');

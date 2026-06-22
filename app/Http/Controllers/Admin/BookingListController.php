@@ -13,6 +13,7 @@ use App\Jobs\SendEmail;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 
 class BookingListController extends Controller
 {
@@ -241,34 +242,101 @@ class BookingListController extends Controller
         // update data 
         if ($item->update($data)) {
             session()->flash('alert-success', 'Booking Ruang ' . $item->room->name . ' sekarang ' . $data['status']);
-
-            $recipients = [
-                ['role' => 'USER', 'email' => $user_email, 'name' => $user_name, 'url' => URL::to('/my-booking-list'),],
-                ['role' => 'ADMIN', 'email' => $admin_email, 'name' => $admin_name, 'url' => URL::to('/admin/booking-list'),],
-            ];
-
-            foreach ($recipients as $recipient) {
-                try {
-                    Mail::to($recipient['email'])->send(new \App\Mail\BookingMail(
-                        $user_name,
-                        $item->room->name,
-                        $item->date,
-                        $item->start_time,
-                        $item->end_time,
-                        $item->purpose,
-                        $recipient['role'],
-                        $recipient['name'],
-                        $recipient['url'],
-                        $data['status']
-                    ));
-                    \Log::info("Email berhasil dikirim ke: " . $recipient['email']);
-                } catch (\Exception $e) {
-                    \Log::error('Gagal mengirim email ke ' . $recipient['email'] . ": " . $e->getMessage());
-                }
-            }
+            /**
+             * feature send email dinonaktifkan
+             $recipients = [
+                 ['role' => 'USER', 'email' => $user_email, 'name' => $user_name, 'url' => URL::to('/my-booking-list'),],
+                 ['role' => 'ADMIN', 'email' => $admin_email, 'name' => $admin_name, 'url' => URL::to('/admin/booking-list'),],
+             ];
+ 
+             foreach ($recipients as $recipient) {
+                 try {
+                     Mail::to($recipient['email'])->send(new \App\Mail\BookingMail(
+                         $user_name,
+                         $item->room->name,
+                         $item->date,
+                         $item->start_time,
+                         $item->end_time,
+                         $item->purpose,
+                         $recipient['role'],
+                         $recipient['name'],
+                         $recipient['url'],
+                         $data['status']
+                     ));
+                     \Log::info("Email berhasil dikirim ke: " . $recipient['email']);
+                 } catch (\Exception $e) {
+                     \Log::error('Gagal mengirim email ke ' . $recipient['email'] . ": " . $e->getMessage());
+                 }
+             }
+             */
         } else {
             session()->flash('alert-failed', 'Booking Ruang ' . $item->room->name . ' gagal diupdate');
         }
         return redirect()->route('booking-list.index');
+    }
+
+    public function deleteMultiple(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:booking_lists,id'
+        ]);
+
+        $ids = $request->ids;
+
+        // Pastikan hanya booking dengan status EXPIRED atau SELESAI yang bisa dihapus
+        $bookings = BookingList::whereIn('id', $ids)
+            ->whereIn('status', ['EXPIRED', 'SELESAI'])
+            ->get();
+
+        if ($bookings->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada booking yang valid untuk dihapus. Hanya booking dengan status EXPIRED atau SELESAI yang dapat dihapus.'
+            ], 400);
+        }
+
+        $deletedCount = 0;
+        $failedIds = [];
+
+        try {
+            DB::beginTransaction();
+
+            foreach ($bookings as $booking) {
+                // Cek apakah booking benar-benar sudah lewat
+                $endDateTime = Carbon::parse($booking->date . ' ' . $booking->end_time);
+                $now = Carbon::now();
+
+                if ($booking->status == 'EXPIRED' || $booking->status == 'SELESAI' || $endDateTime->lessThanOrEqualTo($now)) {
+                    // Hapus booking (soft delete karena menggunakan SoftDeletes)
+                    $booking->delete();
+                    $deletedCount++;
+                } else {
+                    $failedIds[] = $booking->id;
+                }
+            }
+
+            DB::commit();
+
+            $message = $deletedCount . ' booking berhasil dihapus.';
+            if (!empty($failedIds)) {
+                $message .= ' ' . count($failedIds) . ' booking gagal dihapus karena masih aktif.';
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'deleted_count' => $deletedCount,
+                'failed_ids' => $failedIds
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error deleting multiple bookings: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menghapus data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
