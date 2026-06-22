@@ -22,8 +22,9 @@ class CalendarController extends Controller
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
 
+        // Tambahkan status PENDING agar semua booking muncul
         $bookings = BookingList::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN', 'BOOKING_BY_LAB', 'SELESAI'])
+            ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN', 'BOOKING_BY_LAB', 'SELESAI', 'PENDING'])
             ->when($roomId, function ($query) use ($roomId) {
                 return $query->where('room_id', $roomId);
             })
@@ -35,15 +36,17 @@ class CalendarController extends Controller
         // Kelompokkan booking per tanggal
         $bookingsByDate = $bookings->groupBy('date');
 
-        // Data untuk kalender
+        // Set startOfWeek ke Senin (Carbon::MONDAY)
         $calendarData = [];
-        $currentDate = $startDate->copy();
+        $currentDate = $startDate->copy()->startOfWeek(Carbon::MONDAY);
+        $endDatePlusWeek = $endDate->copy()->endOfWeek(Carbon::MONDAY);
 
-        while ($currentDate <= $endDate) {
+        while ($currentDate <= $endDatePlusWeek) {
             $dateKey = $currentDate->toDateString();
             $calendarData[$dateKey] = [
                 'date' => $currentDate->copy(),
                 'isToday' => $currentDate->isToday(),
+                'isCurrentMonth' => $currentDate->month == $month && $currentDate->year == $year,
                 'isWeekend' => $currentDate->isWeekend(),
                 'bookings' => $bookingsByDate->get($dateKey, collect()),
             ];
@@ -73,23 +76,6 @@ class CalendarController extends Controller
         ));
     }
 
-    public function getBookings(Request $request)
-    {
-        $date = $request->get('date');
-        $roomId = $request->get('room_id');
-
-        $query = BookingList::where('date', $date)
-            ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN', 'BOOKING_BY_LAB', 'SELESAI'])
-            ->with(['room', 'user']);
-
-        if ($roomId) {
-            $query->where('room_id', $roomId);
-        }
-
-        $bookings = $query->orderBy('start_time')->get();
-
-        return response()->json($bookings);
-    }
     public function getBookingDetail($id)
     {
         $booking = BookingList::with(['room', 'user'])->findOrFail($id);

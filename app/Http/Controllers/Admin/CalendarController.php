@@ -21,8 +21,9 @@ class CalendarController extends Controller
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
 
+        //Tambahkan status PENDING
         $bookings = BookingList::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN', 'BOOKING_BY_LAB', 'SELESAI'])
+            ->whereIn('status', ['DISETUJUI', 'DIGUNAKAN', 'BOOKING_BY_LAB', 'SELESAI', 'PENDING'])
             ->when($roomId, function ($query) use ($roomId) {
                 return $query->where('room_id', $roomId);
             })
@@ -33,14 +34,17 @@ class CalendarController extends Controller
 
         $bookingsByDate = $bookings->groupBy('date');
 
+        //Set startOfWeek ke Senin
         $calendarData = [];
-        $currentDate = $startDate->copy();
+        $currentDate = $startDate->copy()->startOfWeek(Carbon::MONDAY);
+        $endDatePlusWeek = $endDate->copy()->endOfWeek(Carbon::MONDAY);
 
-        while ($currentDate <= $endDate) {
+        while ($currentDate <= $endDatePlusWeek) {
             $dateKey = $currentDate->toDateString();
             $calendarData[$dateKey] = [
                 'date' => $currentDate->copy(),
                 'isToday' => $currentDate->isToday(),
+                'isCurrentMonth' => $currentDate->month == $month && $currentDate->year == $year,
                 'isWeekend' => $currentDate->isWeekend(),
                 'bookings' => $bookingsByDate->get($dateKey, collect()),
             ];
@@ -67,6 +71,7 @@ class CalendarController extends Controller
             'endDate'
         ));
     }
+
     public function getBookingDetail($id)
     {
         $booking = BookingList::with(['room', 'user'])->findOrFail($id);

@@ -199,6 +199,9 @@ Route::prefix('admin')
         Route::put('/booking-list/{id}/update/{value}', [BookingListController::class, 'update'])
             ->name('booking-list.update');
 
+        Route::post('/booking-list/delete-multiple', [BookingListController::class, 'deleteMultiple'])
+            ->name('booking-list.delete-multiple');
+
         Route::get('/alat-test-booking-list/json', [AlatTestBookingListController::class, 'json'])
             ->name('alat-test-booking-list.json');
 
