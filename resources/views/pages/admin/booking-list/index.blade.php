@@ -90,7 +90,7 @@
                             <input type="checkbox" class="custom-control-input" id="select-all">
                             <label class="custom-control-label font-weight-bold" for="select-all">Pilih Semua</label>
                         </div>
-                        <small class="text-muted ml-4">Hanya booking dengan status EXPIRED atau SELESAI yang dapat
+                        <small class="text-muted ml-4">Hanya booking dengan status EXPIRED, DITOLAK dan SELESAI yang dapat
                             dihapus</small>
                     </div>
                 </div>
@@ -153,7 +153,8 @@
                         render: function(data, type, row) {
                             if (type === 'display') {
                                 // Hanya tampilkan checkbox jika status EXPIRED atau SELESAI
-                                if (row.status === 'EXPIRED' || row.status === 'SELESAI') {
+                                if (row.status === 'EXPIRED' || row.status === 'SELESAI' || row
+                                    .status === 'DITOLAK') {
                                     return `<input type="checkbox" class="row-checkbox" data-id="${row.id}" value="${row.id}">`;
                                 }
                                 return '';
@@ -200,7 +201,7 @@
                             result += '<div class="table-links">';
 
                             if (dt > now && (row.status === 'PENDING' || row.status ===
-                                'DITOLAK')) {
+                                    'DITOLAK')) {
                                 result += ` 
               <a href="javascript:;" data-id="${row.id}" 
                  data-title="Setujui" data-body="Yakin setujui booking ini?" 

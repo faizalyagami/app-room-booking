@@ -20,10 +20,12 @@ use App\Models\DayTime;
 use Carbon\Carbon;
 // use DataTables;
 use Yajra\DataTables\Facades\DataTables;
+use App\Notifications\BookingCreatedNotification;
 
 class MyBookingListController extends Controller
 {
-    public function json(){
+    public function json()
+    {
         $data = BookingList::where('user_id', Auth::user()->id)->with([
             'room'
         ]);
@@ -58,9 +60,9 @@ class MyBookingListController extends Controller
             ->get();
 
         return view('pages.user.my-booking-list.create', [
-            'rooms' => $rooms, 
-            'times' => $times, 
-            'nowdate' => $nowdate, 
+            'rooms' => $rooms,
+            'times' => $times,
+            'nowdate' => $nowdate,
         ]);
     }
 
@@ -74,23 +76,23 @@ class MyBookingListController extends Controller
     {
         $time = explode(" - ", $request->time);
         $room = Room::select('name')->where('id', $request->room_id)->firstOrFail();
-        
+
         // ✅ FIX: CEK OVERLAP DENGAN STATUS DISETUJUI DAN BOOKING_BY_LAB
         $isOverlap = BookingList::where('date', $request->date)
             ->where('room_id', $request->room_id)
             ->whereIn('status', ['DISETUJUI', 'BOOKING_BY_LAB']) // ✅ TAMBAHKAN BOOKING_BY_LAB
             ->where(function ($q) use ($time) {
                 $q->whereBetween('start_time', [$time[0], $time[1]])
-                ->orWhereBetween('end_time', [$time[0], $time[1]])
-                ->orWhere(function ($q2) use ($time) {
-                    $q2->where('start_time', '<=', $time[0])
-                        ->where('end_time', '>=', $time[1]);
-                });
+                    ->orWhereBetween('end_time', [$time[0], $time[1]])
+                    ->orWhere(function ($q2) use ($time) {
+                        $q2->where('start_time', '<=', $time[0])
+                            ->where('end_time', '>=', $time[1]);
+                    });
             })
             ->exists();
 
         if ($isOverlap) {
-            $request->session()->flash('alert-failed', 'Ruangan '.$room->name.' di waktu itu sudah dibooking');
+            $request->session()->flash('alert-failed', 'Ruangan ' . $room->name . ' di waktu itu sudah dibooking');
             return redirect()->route('my-booking-list.create');
         }
 
@@ -100,8 +102,8 @@ class MyBookingListController extends Controller
 
         // Cek APAKAH WAKTU MULAI SUDAH LEWAT
         if ($bookingDateTimeStart->lessThanOrEqualTo($now)) {
-        $request->session()->flash('alert-failed', 'Tidak bisa booking untuk waktu yang sudah lewat. Silakan pilih jadwal yang akan datang.');
-        return redirect()->route('my-booking-list.create');
+            $request->session()->flash('alert-failed', 'Tidak bisa booking untuk waktu yang sudah lewat. Silakan pilih jadwal yang akan datang.');
+            return redirect()->route('my-booking-list.create');
         }
 
         // Cek APAKAH WAKTU SELESAI SUDAH LEWAT
@@ -113,7 +115,7 @@ class MyBookingListController extends Controller
         // Cek APAKAH TANGGAL BOOKING KURANG DARI HARI INI
         $today = Carbon::today();
         $bookingDate = Carbon::parse($request->date);
-        
+
         if ($bookingDate->lessThan($today)) {
             $request->session()->flash('alert-failed', 'Tidak bisa booking untuk tanggal yang sudah lewat.');
             return redirect()->route('my-booking-list.create');
@@ -128,6 +130,10 @@ class MyBookingListController extends Controller
         $message->purpose = $request->purpose;
         $message->save();
 
+        auth()->user()->notify(
+            new BookingCreatedNotification($message)
+        );
+
         // Ambil data user & admin
         $user   = Auth::user();
         $admin  = $this->getAdminData();
@@ -135,7 +141,7 @@ class MyBookingListController extends Controller
 
         // Email ke USER
         dispatch(new SendEmail(
-            [$user->email], 
+            [$user->email],
             'room', // type
             [
                 'user_name'     => $user->name,
@@ -153,7 +159,7 @@ class MyBookingListController extends Controller
 
         // Email ke ADMIN
         dispatch(new SendEmail(
-            [$admin->email], 
+            [$admin->email],
             'room', // type
             [
                 'user_name'     => $user->name,
@@ -168,9 +174,8 @@ class MyBookingListController extends Controller
                 'status'        => $status,
             ]
         ));
-            $request->session()->flash('alert-success', 'Booking ruang '.$room->name.' berhasil ditambahkan');
-            return redirect()->route('my-booking-list.index');
-        
+        $request->session()->flash('alert-success', 'Booking ruang ' . $room->name . ' berhasil ditambahkan');
+        return redirect()->route('my-booking-list.index');
     }
 
     /**
@@ -187,8 +192,8 @@ class MyBookingListController extends Controller
 
         $room               = Room::select('name')->where('id', $item->room_id)->firstOrFail();
 
-        if($item->update($data)) {
-            session()->flash('alert-success', 'Booking Ruang '.$room->name.' berhasil dibatalkan');
+        if ($item->update($data)) {
+            session()->flash('alert-success', 'Booking Ruang ' . $room->name . ' berhasil dibatalkan');
 
             $user_name          = $this->getUserName();
             $user_email         = $this->getUserEmail();
@@ -232,21 +237,24 @@ class MyBookingListController extends Controller
                 ]
             ));
         } else {
-            session()->flash('alert-failed', 'Booking Ruang '.$room->name.' gagal dibatalkan');
+            session()->flash('alert-failed', 'Booking Ruang ' . $room->name . ' gagal dibatalkan');
         }
-        
+
         return redirect()->route('my-booking-list.index');
     }
 
-    public function getAdminData() {
-        return User::select('name','email')->where('role', 'ADMIN')->firstOrFail();
+    public function getAdminData()
+    {
+        return User::select('name', 'email')->where('role', 'ADMIN')->firstOrFail();
     }
 
-    public function getUserName() {
+    public function getUserName()
+    {
         return Auth::user()->name;
     }
 
-    public function getUserEmail() {
+    public function getUserEmail()
+    {
         return Auth::user()->email;
     }
 }

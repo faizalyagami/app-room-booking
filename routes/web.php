@@ -69,6 +69,14 @@ Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
 Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
 Route::patch('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
 
+Route::middleware('auth')->group(function () {
+
+    Route::post(
+        '/notifications/read/{id}',
+        [App\Http\Controllers\NotificationController::class, 'read']
+    )->name('notifications.read');
+});
+
 Route::prefix('/')
     ->middleware(['auth', 'is.user'])
     ->group(function () {
