@@ -29,8 +29,8 @@ class BookingCreatedNotification extends Notification
             'date' => $this->booking->date,
             'start_time' => $this->booking->start_time,
             'end_time' => $this->booking->end_time,
-            'status' => 'Pending',
-            'message' => 'Booking ruangan berhasil dibuat dan sedang menunggu persetujuan admin.'
+            'status' => 'PENDING',
+            'message' => 'Booking ruangan ' . $this->booking->room->name . ' berhasil dibuat dan sedang menunggu persetujuan admin.'
         ];
     }
 }

@@ -134,6 +134,14 @@ class MyBookingListController extends Controller
             new BookingCreatedNotification($message)
         );
 
+        $adminUser = User::where('role', 'ADMIN')->first();
+
+        if ($adminUser) {
+            $adminUser->notify(
+                new BookingCreatedNotification($message)
+            );
+        }
+
         // Ambil data user & admin
         $user   = Auth::user();
         $admin  = $this->getAdminData();
