@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             RoomSeeder::class,
-            DayTimesSeeder::class,
+            // DayTimesSeeder::class,
             // PlottedRoomSeeder::class
         ]);
     }

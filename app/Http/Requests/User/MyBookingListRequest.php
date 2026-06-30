@@ -25,22 +25,12 @@ class MyBookingListRequest extends FormRequest
      */
     public function rules()
     {
-        $rules = [
-            'room_id'           => 'required|integer|exists:rooms,id',
-            'date'              => 'required|date_format:Y-m-d|after_or_equal:today',
-            'time'              => 'required',
-            'purpose'           => 'required|string|max:100',
+        return [
+            'room_id' => 'required|exists:rooms,id',
+            'date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'purpose' => 'required|string|max:1000',
         ];
-
-        // $today = Carbon::now()->toDateString();
-        // $now = Carbon::now()->format('H:i');
-
-        // if ($this->input('date') == $today) {
-        //     $rules['start_time'] = 'required|date_format:H:i|before:end_time|after:'.$now;
-        // } else {
-        //     $rules['start_time'] = 'required|date_format:H:i|before:end_time';
-        // }
-
-        return $rules;
     }
 }

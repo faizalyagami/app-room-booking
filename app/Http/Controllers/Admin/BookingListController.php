@@ -14,6 +14,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use App\Notifications\BookingRoomNotification;
 
 class BookingListController extends Controller
 {
@@ -241,6 +242,12 @@ class BookingListController extends Controller
 
         // update data 
         if ($item->update($data)) {
+            $item->user->notify(
+                new BookingRoomNotification(
+                    $item,
+                    $data['status']
+                )
+            );
             session()->flash('alert-success', 'Booking Ruang ' . $item->room->name . ' sekarang ' . $data['status']);
             /**
              * feature send email dinonaktifkan
@@ -284,15 +291,14 @@ class BookingListController extends Controller
 
         $ids = $request->ids;
 
-        // Pastikan hanya booking dengan status EXPIRED atau SELESAI yang bisa dihapus
         $bookings = BookingList::whereIn('id', $ids)
-            ->whereIn('status', ['EXPIRED', 'SELESAI'])
+            ->whereIn('status', ['EXPIRED', 'SELESAI', 'DITOLAK'])
             ->get();
 
         if ($bookings->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak ada booking yang valid untuk dihapus. Hanya booking dengan status EXPIRED atau SELESAI yang dapat dihapus.'
+                'message' => 'Tidak ada booking yang valid untuk dihapus. Hanya booking dengan status EXPIRED, DITOLAK atau SELESAI yang dapat dihapus.'
             ], 400);
         }
 
@@ -307,7 +313,7 @@ class BookingListController extends Controller
                 $endDateTime = Carbon::parse($booking->date . ' ' . $booking->end_time);
                 $now = Carbon::now();
 
-                if ($booking->status == 'EXPIRED' || $booking->status == 'SELESAI' || $endDateTime->lessThanOrEqualTo($now)) {
+                if ($booking->status == 'EXPIRED' || $booking->status == 'SELESAI' || $booking->status === 'DITOLAK' || $endDateTime->lessThanOrEqualTo($now)) {
                     // Hapus booking (soft delete karena menggunakan SoftDeletes)
                     $booking->delete();
                     $deletedCount++;
