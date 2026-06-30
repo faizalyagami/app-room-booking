@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use App\Models\BookingList;
 
 class BookingCreatedNotification extends Notification
 {
@@ -11,7 +12,7 @@ class BookingCreatedNotification extends Notification
 
     protected $booking;
 
-    public function __construct($booking)
+    public function __construct(BookingList $booking)
     {
         $this->booking = $booking;
     }
@@ -30,7 +31,8 @@ class BookingCreatedNotification extends Notification
             'start_time' => $this->booking->start_time,
             'end_time' => $this->booking->end_time,
             'status' => 'PENDING',
-            'message' => 'Booking ruangan ' . $this->booking->room->name . ' berhasil dibuat dan sedang menunggu persetujuan admin.'
+            'message' => 'Booking ruangan ' . $this->booking->room->name . ' berhasil dibuat dan sedang menunggu persetujuan admin.',
+            'booking_id' => $this->booking->id,
         ];
     }
 }

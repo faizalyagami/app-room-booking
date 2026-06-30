@@ -58,6 +58,7 @@ Route::group(['namespace' => 'App\Http\Controllers'], function () {
 
     Route::group(['prefix' => 'day-times', 'as' => 'day-times.'], function () {
         Route::get('get-times', 'DayTimeController@getTimes')->name('get-times');
+        Route::post('check-overlap', 'DayTimeController@checkOverlap')->name('check-overlap');
     });
 });
 

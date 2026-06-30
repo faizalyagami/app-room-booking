@@ -74,116 +74,88 @@ class MyBookingListController extends Controller
      */
     public function store(MyBookingListRequest $request)
     {
-        $time = explode(" - ", $request->time);
-        $room = Room::select('name')->where('id', $request->room_id)->firstOrFail();
+        try {
+            \Log::info('Store booking started', $request->all());
 
-        // ✅ FIX: CEK OVERLAP DENGAN STATUS DISETUJUI DAN BOOKING_BY_LAB
-        $isOverlap = BookingList::where('date', $request->date)
-            ->where('room_id', $request->room_id)
-            ->whereIn('status', ['DISETUJUI', 'BOOKING_BY_LAB']) // ✅ TAMBAHKAN BOOKING_BY_LAB
-            ->where(function ($q) use ($time) {
-                $q->whereBetween('start_time', [$time[0], $time[1]])
-                    ->orWhereBetween('end_time', [$time[0], $time[1]])
-                    ->orWhere(function ($q2) use ($time) {
-                        $q2->where('start_time', '<=', $time[0])
-                            ->where('end_time', '>=', $time[1]);
+            $room = Room::select('name')->where('id', $request->room_id)->firstOrFail();
+
+            $startTime = $request->start_time;
+            $endTime = $request->end_time;
+
+            // CEK OVERLAP
+            $isOverlap = BookingList::where('date', $request->date)
+                ->where('room_id', $request->room_id)
+                ->whereIn('status', ['DISETUJUI', 'BOOKING_BY_LAB'])
+                ->where(function ($q) use ($startTime, $endTime) {
+                    // Kondisi 1: Booking yang dimulai di antara waktu booking
+                    $q->orWhereBetween('start_time', [$startTime, $endTime]);
+                    // Kondisi 2: Booking yang berakhir di antara waktu booking
+                    $q->orWhereBetween('end_time', [$startTime, $endTime]);
+                    // Kondisi 3: Booking yang mencakup seluruh waktu booking
+                    $q->orWhere(function ($sub) use ($startTime, $endTime) {
+                        $sub->where('start_time', '<=', $startTime)
+                            ->where('end_time', '>=', $endTime);
                     });
-            })
-            ->exists();
+                })
+                ->exists();
 
-        if ($isOverlap) {
-            $request->session()->flash('alert-failed', 'Ruangan ' . $room->name . ' di waktu itu sudah dibooking');
-            return redirect()->route('my-booking-list.create');
+            if ($isOverlap) {
+                return redirect()->route('my-booking-list.create')
+                    ->with('alert-failed', 'Ruangan ' . $room->name . ' di waktu itu sudah dibooking');
+            }
+
+            // CEK WAKTU MULAI SUDAH LEWAT
+            $bookingDateTimeStart = Carbon::parse($request->date . ' ' . $startTime);
+            $bookingDateTimeEnd = Carbon::parse($request->date . ' ' . $endTime);
+            $now = Carbon::now();
+
+            if ($bookingDateTimeStart->lessThanOrEqualTo($now)) {
+                return redirect()->route('my-booking-list.create')
+                    ->with('alert-failed', 'Tidak bisa booking untuk waktu yang sudah lewat. Silakan pilih jadwal yang akan datang.');
+            }
+
+            if ($bookingDateTimeEnd->lessThanOrEqualTo($now)) {
+                return redirect()->route('my-booking-list.create')
+                    ->with('alert-failed', 'Tanggal dan waktu yang dipilih sudah terlewat. Silahkan pilih waktu yang masih tersedia.');
+            }
+
+            $today = Carbon::today();
+            $bookingDate = Carbon::parse($request->date);
+
+            if ($bookingDate->lessThan($today)) {
+                return redirect()->route('my-booking-list.create')
+                    ->with('alert-failed', 'Tidak bisa booking untuk tanggal yang sudah lewat.');
+            }
+
+            // SIMPAN BOOKING
+            $message = new BookingList();
+            $message->room_id = $request->room_id;
+            $message->user_id = auth()->user()->id;
+            $message->date = $request->date;
+            $message->start_time = $startTime;
+            $message->end_time = $endTime;
+            $message->status = 'PENDING';
+            $message->purpose = $request->purpose;
+            $message->save();
+
+            \Log::info('Booking saved successfully', ['id' => $message->id]);
+
+            auth()->user()->notify(new BookingCreatedNotification($message));
+
+            $adminUser = User::where('role', 'ADMIN')->first();
+            if ($adminUser) {
+                $adminUser->notify(new BookingCreatedNotification($message));
+            }
+
+            return redirect()->route('my-booking-list.index')
+                ->with('alert-success', 'Booking ruang ' . $room->name . ' berhasil ditambahkan');
+        } catch (\Exception $e) {
+            \Log::error('Error in store booking: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            return redirect()->route('my-booking-list.create')
+                ->with('alert-failed', 'Terjadi kesalahan: ' . $e->getMessage());
         }
-
-        $bookingDateTimeStart = Carbon::parse($request->date . ' ' . $time[0]);
-        $bookingDateTimeEnd = Carbon::parse($request->date . ' ' . $time[1]);
-        $now = Carbon::now();
-
-        // Cek APAKAH WAKTU MULAI SUDAH LEWAT
-        if ($bookingDateTimeStart->lessThanOrEqualTo($now)) {
-            $request->session()->flash('alert-failed', 'Tidak bisa booking untuk waktu yang sudah lewat. Silakan pilih jadwal yang akan datang.');
-            return redirect()->route('my-booking-list.create');
-        }
-
-        // Cek APAKAH WAKTU SELESAI SUDAH LEWAT
-        if ($bookingDateTimeEnd->lessThanOrEqualTo($now)) {
-            $request->session()->flash('alert-failed', 'Tanggal dan waktu yang dipilih sudah terlewat. Silahkan pilih waktu yang masih tersedia.');
-            return redirect()->route('my-booking-list.create');
-        }
-
-        // Cek APAKAH TANGGAL BOOKING KURANG DARI HARI INI
-        $today = Carbon::today();
-        $bookingDate = Carbon::parse($request->date);
-
-        if ($bookingDate->lessThan($today)) {
-            $request->session()->flash('alert-failed', 'Tidak bisa booking untuk tanggal yang sudah lewat.');
-            return redirect()->route('my-booking-list.create');
-        }
-        $message = new BookingList();
-        $message->room_id = $request->room_id;
-        $message->user_id = auth()->user()->id;
-        $message->date = $request->date;
-        $message->start_time = $time[0];
-        $message->end_time = $time[1];
-        $message->status = 'PENDING';
-        $message->purpose = $request->purpose;
-        $message->save();
-
-        auth()->user()->notify(
-            new BookingCreatedNotification($message)
-        );
-
-        $adminUser = User::where('role', 'ADMIN')->first();
-
-        if ($adminUser) {
-            $adminUser->notify(
-                new BookingCreatedNotification($message)
-            );
-        }
-
-        // Ambil data user & admin
-        $user   = Auth::user();
-        $admin  = $this->getAdminData();
-        $status = 'DIBUAT';
-
-        // Email ke USER
-        dispatch(new SendEmail(
-            [$user->email],
-            'room', // type
-            [
-                'user_name'     => $user->name,
-                'room_name'     => $room->name,
-                'date'          => $request->date,
-                'start_time'    => $time[0],
-                'end_time'      => $time[1],
-                'purpose'       => $request->purpose,
-                'to_role'       => 'USER',
-                'receiver_name' => $user->name,
-                'url'           => URL::to('/my-booking-list'),
-                'status'        => $status,
-            ]
-        ));
-
-        // Email ke ADMIN
-        dispatch(new SendEmail(
-            [$admin->email],
-            'room', // type
-            [
-                'user_name'     => $user->name,
-                'room_name'     => $room->name,
-                'date'          => $request->date,
-                'start_time'    => $time[0],
-                'end_time'      => $time[1],
-                'purpose'       => $request->purpose,
-                'to_role'       => 'ADMIN',
-                'receiver_name' => $admin->name,
-                'url'           => URL::to('/admin/booking-list'),
-                'status'        => $status,
-            ]
-        ));
-        $request->session()->flash('alert-success', 'Booking ruang ' . $room->name . ' berhasil ditambahkan');
-        return redirect()->route('my-booking-list.index');
     }
 
     /**
@@ -264,5 +236,32 @@ class MyBookingListController extends Controller
     public function getUserEmail()
     {
         return Auth::user()->email;
+    }
+
+    public function rules()
+    {
+        return [
+            'room_id' => 'required|exists:rooms,id',
+            'date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'purpose' => 'required|string',
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            'room_id.required' => 'Ruangan wajib dipilih',
+            'room_id.exists' => 'Ruangan tidak valid',
+            'date.required' => 'Tanggal booking wajib diisi',
+            'date.date' => 'Format tanggal tidak valid',
+            'start_time.required' => 'Jam mulai wajib diisi',
+            'start_time.date_format' => 'Format jam mulai tidak valid (HH:MM)',
+            'end_time.required' => 'Jam selesai wajib diisi',
+            'end_time.date_format' => 'Format jam selesai tidak valid (HH:MM)',
+            'end_time.after' => 'Jam selesai harus setelah jam mulai',
+            'purpose.required' => 'Keperluan wajib diisi',
+        ];
     }
 }
