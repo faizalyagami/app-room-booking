@@ -206,7 +206,7 @@ class BookingListController extends Controller
         return view('pages.admin.booking-list.index', compact('rooms'));
     }
 
-    public function update($id, $value)
+    public function update(Request $request, $id, $value)
     {
         $item = BookingList::with(['room', 'user'])->findOrFail($id);
         $today = Carbon::today();
@@ -233,8 +233,14 @@ class BookingListController extends Controller
         // tentukan status 
         if ($value == 1) {
             $data['status'] = 'DISETUJUI';
+            $data['rejection_reason'] = null;
         } elseif ($value == 0) {
+            $request->validate([
+                'rejection_reason' => 'required|string|max:1000'
+            ]);
+
             $data['status'] = 'DITOLAK';
+            $data['rejection_reason'] = $request->rejection_reason;
         } else {
             session()->flash('alert-failed', 'Perintah tidak dimengerti');
             return redirect()->route('booking-list.index');
