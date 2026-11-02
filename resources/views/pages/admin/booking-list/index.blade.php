@@ -113,6 +113,7 @@
                 <th>No</th>
                 <th>Ruangan</th>
                 <th>Nama</th>
+                <th>Waktu Booking</th>
                 <th>Tanggal</th>
                 <th>Waktu Mulai</th>
                 <th>Waktu Selesai</th>
@@ -142,8 +143,8 @@
                     }
                 },
                 order: [
-                    [4, 'asc'],
-                    [5, 'asc']
+                    [4, 'desc'],
+                    // [5, 'asc']
                 ],
                 columnDefs: [{
                         targets: [0],
@@ -168,16 +169,16 @@
                         searchable: false
                     },
                     {
-                        targets: [3],
+                        targets: [5],
                         type: 'date',
-                        orderData: [3, 4]
+                        orderData: [5, 6]
                     },
                     {
-                        targets: [4],
-                        orderData: [4, 3]
+                        targets: [6],
+                        orderData: [6, 5]
                     },
                     {
-                        targets: 7,
+                        targets: 8,
                         render: $.fn.dataTable.render.ellipsis(20, true)
                     },
                 ],
@@ -225,6 +226,12 @@
                     {
                         data: 'user',
                         orderable: false
+                    },
+                    {
+                        data: 'booked_at',
+                        name: 'booked_at',
+                        orderable: true,
+                        searchable: true
                     },
                     {
                         data: 'date_display',

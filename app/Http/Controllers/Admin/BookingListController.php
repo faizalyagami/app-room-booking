@@ -71,6 +71,7 @@ class BookingListController extends Controller
                 ELSE 8
             END
         ")
+            ->orderBy('created_at', 'desc')
             ->orderBy('date', 'asc')
             ->orderBy('start_time', 'asc');
 
@@ -89,6 +90,26 @@ class BookingListController extends Controller
                     $day = $this->getIndonesianDay($date->dayOfWeek);
                     return $item->date . ' - ' . $day;
                 })
+                ->addColumn('booked_at', function ($item) {
+                    if (!$item->created_at) {
+                        return '-';
+                    }
+
+                    $created = Carbon::parse($item->created_at);
+
+                    $dateFormatted = $created->format('d/M/Y');
+                    $timeFormatted = $created->format('H:i');
+
+                    $diffForHumans = $created->diffForHumans();
+
+                    return '<div class="text-center">'
+                        . '<span class="badge badge-light border">'
+                        . $dateFormatted . ' ' . $timeFormatted
+                        . '</span>'
+                        . '<br><small class="text-muted">' . $diffForHumans . '</small>'
+                        . '</div>';
+                })
+                ->rawColumns(['booked_at'])
                 ->addColumn('purpose', function ($item) {
                     return $item->purpose;
                 })
@@ -104,6 +125,13 @@ class BookingListController extends Controller
             $date = Carbon::parse($item->date);
             $day = $this->getIndonesianDay($date->dayOfWeek);
             $formattedDate = $item->date . ' - ' . $day;
+
+            $bookedAt = '-';
+            if ($item->created_at) {
+                $created = Carbon::parse($item->created_at);
+                $bookedAt = $created->format('d/M/Y H:i');
+            }
+
             return [
                 'index' => $index + 1,
                 'id' => $item->id,
@@ -114,6 +142,7 @@ class BookingListController extends Controller
                 'date_display' => $formattedDate,
                 'start_time' => $item->start_time,
                 'end_time' => $item->end_time,
+                'booked_at' => $bookedAt,
                 'purpose' => $item->purpose,
                 'status' => $item->status,
             ];
