@@ -24,6 +24,7 @@ class BookingList extends Model
         'end_time',
         'purpose',
         'status',
+        'rejection_reason',
         'is_fixed',
     ];
 
@@ -32,9 +33,7 @@ class BookingList extends Model
      *
      * @var array
      */
-    protected $hidden = [
-        
-    ];
+    protected $hidden = [];
 
     protected static function boot()
     {
@@ -43,7 +42,7 @@ class BookingList extends Model
         static::creating(function ($model) {
             $startDateTime = Carbon::parse($model->date . ' ' . $model->start_time);
             $now = Carbon::now();
-            
+
             // Jika waktu mulai sudah lewat, set status EXPIRED
             if ($startDateTime->lessThanOrEqualTo($now)) {
                 $model->status = 'EXPIRED';
@@ -51,11 +50,13 @@ class BookingList extends Model
         });
     }
 
-    public function room(){
+    public function room()
+    {
         return $this->belongsTo(Room::class, 'room_id', 'id');
     }
 
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 }

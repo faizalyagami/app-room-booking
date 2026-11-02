@@ -113,6 +113,7 @@
                 <th>No</th>
                 <th>Ruangan</th>
                 <th>Nama</th>
+                <th>Waktu Booking</th>
                 <th>Tanggal</th>
                 <th>Waktu Mulai</th>
                 <th>Waktu Selesai</th>
@@ -122,6 +123,38 @@
         @endslot
     @endcomponent
 @endsection
+
+@push('modal-box')
+    <div class="modal fade" id="rejectModal" tabindex="-1" role="dialog" aria-labelledby="rejectModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form id="reject-form" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="rejectModalLabel">Tolak Booking</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Yakin ingin menolak booking ini?</p>
+                        <div class="form-group">
+                            <label for="rejection_reason">Alasan Penolakan <span class="text-danger">*</span></label>
+                            <textarea name="rejection_reason" id="rejection_reason" class="form-control" rows="4"
+                                placeholder="Contoh: Ruangan sedang digunakan untuk acara fakultas..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-danger">Tolak Booking</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endpush
 
 @push('after-script')
     <script src="//cdn.datatables.net/plug-ins/1.10.22/dataRender/ellipsis.js"></script>
@@ -142,8 +175,8 @@
                     }
                 },
                 order: [
-                    [4, 'asc'],
-                    [5, 'asc']
+                    [4, 'desc'],
+                    // [5, 'asc']
                 ],
                 columnDefs: [{
                         targets: [0],
@@ -168,16 +201,16 @@
                         searchable: false
                     },
                     {
-                        targets: [3],
+                        targets: [5],
                         type: 'date',
-                        orderData: [3, 4]
+                        orderData: [5, 6]
                     },
                     {
-                        targets: [4],
-                        orderData: [4, 3]
+                        targets: [6],
+                        orderData: [6, 5]
                     },
                     {
-                        targets: 7,
+                        targets: 8,
                         render: $.fn.dataTable.render.ellipsis(20, true)
                     },
                 ],
@@ -203,9 +236,9 @@
                             if (dt > now && (row.status === 'PENDING' || row.status ===
                                     'DITOLAK')) {
                                 result += ` 
-              <a href="javascript:;" data-id="${row.id}" 
-                 data-title="Setujui" data-body="Yakin setujui booking ini?" 
-                 data-value="1" class="text-primary" id="acc-btn">Setujui</a>`;
+    <a href="javascript:;" data-id="${row.id}" 
+       data-title="Setujui" data-body="Yakin setujui booking ini?" 
+       data-value="1" class="text-primary acc-btn">Setujui</a>`; // <- ganti id jadi class
                                 if (row.status === 'PENDING') {
                                     result += '<div class="bullet"></div>';
                                 }
@@ -213,9 +246,9 @@
 
                             if (row.status === 'PENDING' || row.status === 'DISETUJUI') {
                                 result += ` 
-              <a href="javascript:;" data-id="${row.id}" 
-                 data-title="Tolak" data-body="Yakin tolak booking ini?" 
-                 data-value="0" class="text-danger" id="deny-btn">Tolak</a>`;
+    <a href="javascript:;" data-id="${row.id}" 
+       data-title="Tolak" data-body="Yakin tolak booking ini?" 
+       data-value="0" class="text-danger deny-btn">Tolak</a>`; // <- ganti id jadi class
                             }
 
                             result += '</div>';
@@ -225,6 +258,12 @@
                     {
                         data: 'user',
                         orderable: false
+                    },
+                    {
+                        data: 'booked_at',
+                        name: 'booked_at',
+                        orderable: true,
+                        searchable: true
                     },
                     {
                         data: 'date_display',
@@ -398,20 +437,70 @@
             });
 
             // ===== SETUJUI / TOLAK =====
-            $(document).on('click', '#acc-btn, #deny-btn', function() {
-                const id = $(this).data('id');
-                const title = $(this).data('title');
-                const body = $(this).data('body');
-                const value = $(this).data('value');
-                const submitClass = value === 1 ? 'btn btn-primary' : 'btn btn-danger';
+            // $(document).on('click', '#acc-btn, #deny-btn', function() {
+            //     const id = $(this).data('id');
+            //     const title = $(this).data('title');
+            //     const body = $(this).data('body');
+            //     const value = $(this).data('value');
+            //     const submitClass = value === 1 ? 'btn btn-primary' : 'btn btn-danger';
 
-                $('.modal-title').html(title);
-                $('.modal-body').html(body);
-                $('#confirm-form').attr('action', `/admin/booking-list/${id}/update/${value}`);
+            //     $('.modal-title').html(title);
+            //     $('.modal-body').html(body);
+            //     $('#confirm-form').attr('action', `/admin/booking-list/${id}/update/${value}`);
+            //     $('#confirm-form').attr('method', 'POST');
+            //     $('#submit-btn').attr('class', submitClass);
+            //     $('#lara-method').attr('value', 'put');
+            //     $('#confirm-modal').modal('show');
+            // });
+
+            // Event untuk SETUJUI
+            $(document).on('click', '.acc-btn', function() {
+                const id = $(this).data('id');
+
+                $('.modal-title').html('Setujui Booking');
+                $('.modal-body').html('Yakin setujui booking ini?');
+
+                $('#confirm-form').attr('action', `/admin/booking-list/${id}/update/1`);
                 $('#confirm-form').attr('method', 'POST');
-                $('#submit-btn').attr('class', submitClass);
+                $('#submit-btn').attr('class', 'btn btn-primary');
                 $('#lara-method').attr('value', 'put');
+
                 $('#confirm-modal').modal('show');
+            });
+
+            // Event untuk TOLAK (Membuka modal form alasan)
+
+            $(document).on('click', '.deny-btn', function(e) {
+                e.preventDefault();
+
+                // 🔥 1. PAKSA BERSIHKAN SEMUA BACKDROP DAN MODAL SEBELUMNYA
+                $('.modal').modal('hide');
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+
+                const id = $(this).data('id');
+
+                // 🔥 2. RESET DAN ATUR FORM PENOLAKAN
+                $('#rejection_reason').val('');
+                $('#reject-form').attr('action', `/admin/booking-list/${id}/update/0`);
+                $('#reject-form').attr('method',
+                    'POST'); // Tetap POST, karena @method('PUT') ada di HTML
+
+                // 🔥 3. TAMPILKAN MODAL
+                $('#rejectModal').modal('show');
+            });
+
+            // Fokuskan kursor setelah modal selesai dibuka
+            $('#rejectModal')
+                .off('shown.bs.modal.rejectBooking')
+                .on('shown.bs.modal.rejectBooking', function() {
+                    $('#rejection_reason').trigger('focus');
+                });
+
+            // Pastikan textarea dapat menerima input
+            $('#rejectModal').on('shown.bs.modal', function() {
+                $('#rejection_reason').trigger('focus');
             });
 
             // Lightbox
