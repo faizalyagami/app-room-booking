@@ -392,7 +392,8 @@
                 });
 
                 $.ajax({
-                    url: '/admin/booking-list/delete-multiple',
+                    // url: '/admin/booking-list/delete-multiple',
+                    url: 'route{{ 'booking-list.delete-multiple' }}',
                     type: 'POST',
                     data: {
                         _token: '{{ csrf_token() }}',
