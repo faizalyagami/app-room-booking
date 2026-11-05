@@ -166,7 +166,7 @@
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: '/admin/booking-list/json',
+                    url: '{{ route('booking-list.json') }}',
                     data: function(d) {
                         d.filter_day = $('#filter-day').val();
                         d.filter_room = $('#filter-room').val();
@@ -238,7 +238,7 @@
                                 result += ` 
     <a href="javascript:;" data-id="${row.id}" 
        data-title="Setujui" data-body="Yakin setujui booking ini?" 
-       data-value="1" class="text-primary acc-btn">Setujui</a>`; // <- ganti id jadi class
+       data-value="1" class="text-primary acc-btn">Setujui</a>`;
                                 if (row.status === 'PENDING') {
                                     result += '<div class="bullet"></div>';
                                 }
@@ -248,7 +248,7 @@
                                 result += ` 
     <a href="javascript:;" data-id="${row.id}" 
        data-title="Tolak" data-body="Yakin tolak booking ini?" 
-       data-value="0" class="text-danger deny-btn">Tolak</a>`; // <- ganti id jadi class
+       data-value="0" class="text-danger deny-btn">Tolak</a>`;
                             }
 
                             result += '</div>';
