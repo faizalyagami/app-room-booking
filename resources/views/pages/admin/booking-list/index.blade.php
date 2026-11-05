@@ -461,7 +461,12 @@
                 $('.modal-title').html('Setujui Booking');
                 $('.modal-body').html('Yakin setujui booking ini?');
 
-                $('#confirm-form').attr('action', `/admin/booking-list/${id}/update/1`);
+                // $('#confirm-form').attr('action', `/admin/booking-list/${id}/update/1`);
+                $('#confirm-form').attr(
+                    'action',
+                    `{{ route('booking-list.update', ['id' => ':id', 'value' => 1]) }}`.replace(':id',
+                        id)
+                );
                 $('#confirm-form').attr('method', 'POST');
                 $('#submit-btn').attr('class', 'btn btn-primary');
                 $('#lara-method').attr('value', 'put');
@@ -474,7 +479,7 @@
             $(document).on('click', '.deny-btn', function(e) {
                 e.preventDefault();
 
-                // 🔥 1. PAKSA BERSIHKAN SEMUA BACKDROP DAN MODAL SEBELUMNYA
+                // 1. PAKSA BERSIHKAN SEMUA BACKDROP DAN MODAL SEBELUMNYA
                 $('.modal').modal('hide');
                 $('.modal-backdrop').remove();
                 $('body').removeClass('modal-open');
@@ -482,13 +487,17 @@
 
                 const id = $(this).data('id');
 
-                // 🔥 2. RESET DAN ATUR FORM PENOLAKAN
+                // 2. RESET DAN ATUR FORM PENOLAKAN
                 $('#rejection_reason').val('');
-                $('#reject-form').attr('action', `/admin/booking-list/${id}/update/0`);
+                // $('#reject-form').attr('action', `/admin/booking-list/${id}/update/0`);
+                $('#reject-form').attr(
+                    'action',
+                    `{{ route('booking-list.update', ['id' => ':id', 'value' => 0]) }}`.replace(':id',
+                        id)
+                );
                 $('#reject-form').attr('method',
-                    'POST'); // Tetap POST, karena @method('PUT') ada di HTML
-
-                // 🔥 3. TAMPILKAN MODAL
+                    'POST');
+                // 3. TAMPILKAN MODAL
                 $('#rejectModal').modal('show');
             });
 
